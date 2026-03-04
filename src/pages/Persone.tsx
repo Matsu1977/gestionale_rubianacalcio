@@ -2,16 +2,28 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/types";
 import { motion } from "framer-motion";
 import { Plus, Pencil, Trash2, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import PersonaDialog from "@/components/persone/PersonaDialog";
 import DeletePersonaDialog from "@/components/persone/DeletePersonaDialog";
 
 type Persona = Tables<"persone">;
+type TipoRuolo = Database["public"]["Enums"]["tipo_ruolo"];
+
+const RUOLO_COLORS: Record<TipoRuolo, string> = {
+  Dirigente: "bg-primary/15 text-primary border-primary/30",
+  Socio: "bg-blue-500/15 text-blue-700 border-blue-500/30",
+  Abbonato: "bg-amber-500/15 text-amber-700 border-amber-500/30",
+  Atleta: "bg-green-500/15 text-green-700 border-green-500/30",
+  Allenatore: "bg-purple-500/15 text-purple-700 border-purple-500/30",
+  Genitore: "bg-rose-500/15 text-rose-700 border-rose-500/30",
+};
 
 export default function Persone() {
   const queryClient = useQueryClient();
@@ -32,19 +44,47 @@ export default function Persone() {
     },
   });
 
+  // Fetch all ruoli grouped by persona_id
+  const { data: ruoliMap = {} } = useQuery({
+    queryKey: ["ruoli"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("ruoli").select("*");
+      if (error) throw error;
+      const map: Record<string, TipoRuolo[]> = {};
+      for (const r of data) {
+        if (!map[r.persona_id]) map[r.persona_id] = [];
+        map[r.persona_id].push(r.tipo_ruolo);
+      }
+      return map;
+    },
+  });
+
   const upsertMutation = useMutation({
-    mutationFn: async (persona: TablesInsert<"persone"> & { id?: string }) => {
-      if (persona.id) {
-        const { error } = await supabase.from("persone").update(persona).eq("id", persona.id);
+    mutationFn: async ({ persona, ruoli }: { persona: TablesInsert<"persone"> & { id?: string }; ruoli: TipoRuolo[] }) => {
+      let personaId = persona.id;
+
+      if (personaId) {
+        const { error } = await supabase.from("persone").update(persona).eq("id", personaId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("persone").insert(persona);
+        const { data, error } = await supabase.from("persone").insert(persona).select("id").single();
+        if (error) throw error;
+        personaId = data.id;
+      }
+
+      // Sync ruoli: delete all existing, then insert new ones
+      await supabase.from("ruoli").delete().eq("persona_id", personaId);
+      if (ruoli.length > 0) {
+        const { error } = await supabase.from("ruoli").insert(
+          ruoli.map((tipo_ruolo) => ({ persona_id: personaId!, tipo_ruolo }))
+        );
         if (error) throw error;
       }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["persone"] });
-      toast.success(variables.id ? "Persona aggiornata" : "Persona creata");
+      queryClient.invalidateQueries({ queryKey: ["ruoli"] });
+      toast.success(variables.persona.id ? "Persona aggiornata" : "Persona creata");
       setDialogOpen(false);
       setEditingPersona(null);
     },
@@ -60,6 +100,7 @@ export default function Persone() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["persone"] });
+      queryClient.invalidateQueries({ queryKey: ["ruoli"] });
       toast.success("Persona eliminata");
       setDeletingPersona(null);
     },
@@ -124,7 +165,7 @@ export default function Persone() {
               <TableRow>
                 <TableHead>Cognome</TableHead>
                 <TableHead>Nome</TableHead>
-                <TableHead className="hidden md:table-cell">Codice Fiscale</TableHead>
+                <TableHead>Ruoli</TableHead>
                 <TableHead className="hidden md:table-cell">Telefono</TableHead>
                 <TableHead className="hidden lg:table-cell">Email</TableHead>
                 <TableHead className="hidden lg:table-cell">Cert. Medico</TableHead>
@@ -136,7 +177,15 @@ export default function Persone() {
                 <TableRow key={persona.id}>
                   <TableCell className="font-medium">{persona.cognome}</TableCell>
                   <TableCell>{persona.nome}</TableCell>
-                  <TableCell className="hidden md:table-cell">{persona.codice_fiscale || "—"}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {(ruoliMap[persona.id] || []).map((ruolo) => (
+                        <Badge key={ruolo} variant="outline" className={RUOLO_COLORS[ruolo]}>
+                          {ruolo}
+                        </Badge>
+                      ))}
+                    </div>
+                  </TableCell>
                   <TableCell className="hidden md:table-cell">{persona.telefono || "—"}</TableCell>
                   <TableCell className="hidden lg:table-cell">{persona.email || "—"}</TableCell>
                   <TableCell className="hidden lg:table-cell">
@@ -173,7 +222,8 @@ export default function Persone() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         persona={editingPersona}
-        onSave={(data) => upsertMutation.mutate(data)}
+        personaRuoli={editingPersona ? (ruoliMap[editingPersona.id] || []) : []}
+        onSave={(persona, ruoli) => upsertMutation.mutate({ persona, ruoli })}
         isSaving={upsertMutation.isPending}
       />
 
