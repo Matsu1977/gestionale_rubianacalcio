@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      movimenti: {
+        Row: {
+          categoria: Database["public"]["Enums"]["categoria_movimento"]
+          created_at: string
+          data: string
+          id: string
+          importo: number
+          metodo_pagamento: Database["public"]["Enums"]["metodo_pagamento"]
+          note: string | null
+          persona_id: string | null
+          riferimento: string | null
+          tipo: Database["public"]["Enums"]["tipo_movimento"]
+        }
+        Insert: {
+          categoria: Database["public"]["Enums"]["categoria_movimento"]
+          created_at?: string
+          data?: string
+          id?: string
+          importo: number
+          metodo_pagamento: Database["public"]["Enums"]["metodo_pagamento"]
+          note?: string | null
+          persona_id?: string | null
+          riferimento?: string | null
+          tipo: Database["public"]["Enums"]["tipo_movimento"]
+        }
+        Update: {
+          categoria?: Database["public"]["Enums"]["categoria_movimento"]
+          created_at?: string
+          data?: string
+          id?: string
+          importo?: number
+          metodo_pagamento?: Database["public"]["Enums"]["metodo_pagamento"]
+          note?: string | null
+          persona_id?: string | null
+          riferimento?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_movimento"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimenti_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "persone"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       persone: {
         Row: {
           certificato_medico_scadenza: string | null
@@ -99,6 +146,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      categoria_movimento:
+        | "Quota socio"
+        | "Abbonamento"
+        | "Tesseramento"
+        | "Altro"
+      metodo_pagamento: "Contanti" | "Bonifico" | "Carta" | "Satispay" | "Altro"
+      tipo_movimento: "Entrata" | "Uscita"
       tipo_ruolo:
         | "Dirigente"
         | "Socio"
@@ -233,6 +287,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      categoria_movimento: [
+        "Quota socio",
+        "Abbonamento",
+        "Tesseramento",
+        "Altro",
+      ],
+      metodo_pagamento: ["Contanti", "Bonifico", "Carta", "Satispay", "Altro"],
+      tipo_movimento: ["Entrata", "Uscita"],
       tipo_ruolo: [
         "Dirigente",
         "Socio",
