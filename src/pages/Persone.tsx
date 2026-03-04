@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import PersonaDialog from "@/components/persone/PersonaDialog";
 import DeletePersonaDialog from "@/components/persone/DeletePersonaDialog";
+import PersonaDetailSheet from "@/components/persone/PersonaDetailSheet";
 
 type Persona = Tables<"persone">;
 type TipoRuolo = Database["public"]["Enums"]["tipo_ruolo"];
@@ -31,6 +32,7 @@ export default function Persone() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
   const [deletingPersona, setDeletingPersona] = useState<Persona | null>(null);
+  const [detailPersona, setDetailPersona] = useState<Persona | null>(null);
 
   const { data: persone = [], isLoading } = useQuery({
     queryKey: ["persone"],
@@ -174,7 +176,7 @@ export default function Persone() {
             </TableHeader>
             <TableBody>
               {filtered.map((persona) => (
-                <TableRow key={persona.id}>
+                <TableRow key={persona.id} className="cursor-pointer" onClick={() => setDetailPersona(persona)}>
                   <TableCell className="font-medium">{persona.cognome}</TableCell>
                   <TableCell>{persona.nome}</TableCell>
                   <TableCell>
@@ -193,7 +195,7 @@ export default function Persone() {
                       ? new Date(persona.certificato_medico_scadenza).toLocaleDateString("it-IT")
                       : "—"}
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-1">
                       <Button
                         variant="ghost"
@@ -232,6 +234,12 @@ export default function Persone() {
         onOpenChange={(open) => { if (!open) setDeletingPersona(null); }}
         onConfirm={() => { if (deletingPersona) deleteMutation.mutate(deletingPersona.id); }}
         isDeleting={deleteMutation.isPending}
+      />
+
+      <PersonaDetailSheet
+        persona={detailPersona}
+        ruoli={detailPersona ? (ruoliMap[detailPersona.id] || []) : []}
+        onClose={() => setDetailPersona(null)}
       />
     </motion.div>
   );
