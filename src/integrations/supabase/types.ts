@@ -14,47 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      abbonamenti: {
-        Row: {
-          corso: string
-          created_at: string
-          id: string
-          importo_totale: number
-          numero_rate: number
-          persona_id: string
-          stagione: string
-          stato_pagamento: string
-        }
-        Insert: {
-          corso: string
-          created_at?: string
-          id?: string
-          importo_totale?: number
-          numero_rate?: number
-          persona_id: string
-          stagione: string
-          stato_pagamento?: string
-        }
-        Update: {
-          corso?: string
-          created_at?: string
-          id?: string
-          importo_totale?: number
-          numero_rate?: number
-          persona_id?: string
-          stagione?: string
-          stato_pagamento?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "abbonamenti_persona_id_fkey"
-            columns: ["persona_id"]
-            isOneToOne: false
-            referencedRelation: "persone"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       movimenti: {
         Row: {
           categoria: Database["public"]["Enums"]["categoria_movimento"]
@@ -66,8 +25,6 @@ export type Database = {
           note: string | null
           persona_id: string | null
           riferimento: string | null
-          riferimento_id: string | null
-          riferimento_tipo: string | null
           tipo: Database["public"]["Enums"]["tipo_movimento"]
         }
         Insert: {
@@ -80,8 +37,6 @@ export type Database = {
           note?: string | null
           persona_id?: string | null
           riferimento?: string | null
-          riferimento_id?: string | null
-          riferimento_tipo?: string | null
           tipo: Database["public"]["Enums"]["tipo_movimento"]
         }
         Update: {
@@ -94,8 +49,6 @@ export type Database = {
           note?: string | null
           persona_id?: string | null
           riferimento?: string | null
-          riferimento_id?: string | null
-          riferimento_tipo?: string | null
           tipo?: Database["public"]["Enums"]["tipo_movimento"]
         }
         Relationships: [
@@ -178,50 +131,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "ruoli_persona_id_fkey"
-            columns: ["persona_id"]
-            isOneToOne: false
-            referencedRelation: "persone"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tesseramenti: {
-        Row: {
-          created_at: string
-          data_fine: string | null
-          data_inizio: string
-          id: string
-          importo: number
-          persona_id: string
-          stagione: string
-          stato: string
-          tipo_tesseramento: string
-        }
-        Insert: {
-          created_at?: string
-          data_fine?: string | null
-          data_inizio?: string
-          id?: string
-          importo?: number
-          persona_id: string
-          stagione: string
-          stato?: string
-          tipo_tesseramento?: string
-        }
-        Update: {
-          created_at?: string
-          data_fine?: string | null
-          data_inizio?: string
-          id?: string
-          importo?: number
-          persona_id?: string
-          stagione?: string
-          stato?: string
-          tipo_tesseramento?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tesseramenti_persona_id_fkey"
             columns: ["persona_id"]
             isOneToOne: false
             referencedRelation: "persone"
