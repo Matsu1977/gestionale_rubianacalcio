@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/types";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -10,6 +11,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+
+type TipoRuolo = Database["public"]["Enums"]["tipo_ruolo"];
+
+const RUOLI_OPTIONS: TipoRuolo[] = ["Dirigente", "Socio", "Abbonato", "Atleta", "Allenatore", "Genitore"];
 
 const schema = z.object({
   nome: z.string().trim().min(1, "Nome obbligatorio").max(100),
@@ -29,11 +36,14 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   persona: Tables<"persone"> | null;
-  onSave: (data: TablesInsert<"persone"> & { id?: string }) => void;
+  personaRuoli: TipoRuolo[];
+  onSave: (data: TablesInsert<"persone"> & { id?: string }, ruoli: TipoRuolo[]) => void;
   isSaving: boolean;
 }
 
-export default function PersonaDialog({ open, onOpenChange, persona, onSave, isSaving }: Props) {
+export default function PersonaDialog({ open, onOpenChange, persona, personaRuoli, onSave, isSaving }: Props) {
+  const [selectedRuoli, setSelectedRuoli] = useState<TipoRuolo[]>([]);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -56,14 +66,22 @@ export default function PersonaDialog({ open, onOpenChange, persona, onSave, isS
           note: persona.note || "",
           certificato_medico_scadenza: persona.certificato_medico_scadenza || "",
         });
+        setSelectedRuoli(personaRuoli);
       } else {
         form.reset({
           nome: "", cognome: "", codice_fiscale: "", data_nascita: "",
           telefono: "", email: "", indirizzo: "", note: "", certificato_medico_scadenza: "",
         });
+        setSelectedRuoli([]);
       }
     }
-  }, [open, persona, form]);
+  }, [open, persona, personaRuoli, form]);
+
+  const toggleRuolo = (ruolo: TipoRuolo) => {
+    setSelectedRuoli((prev) =>
+      prev.includes(ruolo) ? prev.filter((r) => r !== ruolo) : [...prev, ruolo]
+    );
+  };
 
   const onSubmit = (values: FormValues) => {
     const data: TablesInsert<"persone"> & { id?: string } = {
@@ -78,7 +96,7 @@ export default function PersonaDialog({ open, onOpenChange, persona, onSave, isS
       certificato_medico_scadenza: values.certificato_medico_scadenza || null,
     };
     if (persona) data.id = persona.id;
-    onSave(data);
+    onSave(data, selectedRuoli);
   };
 
   return (
@@ -150,6 +168,26 @@ export default function PersonaDialog({ open, onOpenChange, persona, onSave, isS
                 </FormItem>
               )} />
             </div>
+
+            {/* Ruoli section */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Ruoli</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {RUOLI_OPTIONS.map((ruolo) => (
+                  <label
+                    key={ruolo}
+                    className="flex items-center gap-2 rounded-md border p-3 cursor-pointer hover:bg-accent/50 transition-colors"
+                  >
+                    <Checkbox
+                      checked={selectedRuoli.includes(ruolo)}
+                      onCheckedChange={() => toggleRuolo(ruolo)}
+                    />
+                    <span className="text-sm">{ruolo}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <FormField control={form.control} name="note" render={({ field }) => (
               <FormItem>
                 <FormLabel>Note</FormLabel>

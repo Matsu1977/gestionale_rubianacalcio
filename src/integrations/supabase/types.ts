@@ -56,6 +56,41 @@ export type Database = {
         }
         Relationships: []
       }
+      ruoli: {
+        Row: {
+          created_at: string
+          data_fine: string | null
+          data_inizio: string | null
+          id: string
+          persona_id: string
+          tipo_ruolo: Database["public"]["Enums"]["tipo_ruolo"]
+        }
+        Insert: {
+          created_at?: string
+          data_fine?: string | null
+          data_inizio?: string | null
+          id?: string
+          persona_id: string
+          tipo_ruolo: Database["public"]["Enums"]["tipo_ruolo"]
+        }
+        Update: {
+          created_at?: string
+          data_fine?: string | null
+          data_inizio?: string | null
+          id?: string
+          persona_id?: string
+          tipo_ruolo?: Database["public"]["Enums"]["tipo_ruolo"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ruoli_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "persone"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -64,7 +99,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      tipo_ruolo:
+        | "Dirigente"
+        | "Socio"
+        | "Abbonato"
+        | "Atleta"
+        | "Allenatore"
+        | "Genitore"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -191,6 +232,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      tipo_ruolo: [
+        "Dirigente",
+        "Socio",
+        "Abbonato",
+        "Atleta",
+        "Allenatore",
+        "Genitore",
+      ],
+    },
   },
 } as const
