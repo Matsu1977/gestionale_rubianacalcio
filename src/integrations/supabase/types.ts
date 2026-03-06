@@ -18,32 +18,38 @@ export type Database = {
         Row: {
           corso: string
           created_at: string
+          data_inizio: string
           id: string
           importo_totale: number
           numero_rate: number
           persona_id: string
           stagione: string
           stato_pagamento: string
+          tipo_pagamento: string
         }
         Insert: {
           corso: string
           created_at?: string
+          data_inizio?: string
           id?: string
           importo_totale?: number
           numero_rate?: number
           persona_id: string
           stagione: string
           stato_pagamento?: string
+          tipo_pagamento?: string
         }
         Update: {
           corso?: string
           created_at?: string
+          data_inizio?: string
           id?: string
           importo_totale?: number
           numero_rate?: number
           persona_id?: string
           stagione?: string
           stato_pagamento?: string
+          tipo_pagamento?: string
         }
         Relationships: [
           {
