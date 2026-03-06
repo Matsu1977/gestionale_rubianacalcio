@@ -3,14 +3,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { motion } from "framer-motion";
-import { Plus, Pencil, Trash2, Search, CalendarCheck } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, CalendarCheck, Eye, AlertTriangle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { isBefore, parseISO, addDays, addMonths, format } from "date-fns";
 import AbbonamentoDialog from "@/components/abbonamenti/AbbonamentoDialog";
 import DeleteAbbonamentoDialog from "@/components/abbonamenti/DeleteAbbonamentoDialog";
+import RateSheet, { type Rata } from "@/components/abbonamenti/RateSheet";
 
 type Abbonamento = Tables<"abbonamenti">;
 
@@ -26,6 +28,8 @@ export default function Abbonamenti() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Abbonamento | null>(null);
   const [deleting, setDeleting] = useState<Abbonamento | null>(null);
+  const [rateOpen, setRateOpen] = useState(false);
+  const [selectedAbb, setSelectedAbb] = useState<Abbonamento | null>(null);
 
   const { data: abbonamenti = [], isLoading } = useQuery({
     queryKey: ["abbonamenti"],
@@ -47,19 +51,53 @@ export default function Abbonamenti() {
     },
   });
 
+  const { data: allRate = [] } = useQuery<Rata[]>({
+    queryKey: ["rate"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("rate").select("*").order("numero_rata", { ascending: true });
+      if (error) throw error;
+      return data as unknown as Rata[];
+    },
+  });
+
+  const rateByAbb = allRate.reduce<Record<string, Rata[]>>((acc, r) => {
+    (acc[r.abbonamento_id] ||= []).push(r);
+    return acc;
+  }, {});
+
   const upsertMutation = useMutation({
     mutationFn: async (abb: TablesInsert<"abbonamenti"> & { id?: string }) => {
       if (abb.id) {
         const { error } = await supabase.from("abbonamenti").update(abb).eq("id", abb.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("abbonamenti").insert(abb);
+        // Insert abbonamento
+        const { data, error } = await supabase.from("abbonamenti").insert(abb).select().single();
         if (error) throw error;
+
+        // Auto-generate rate
+        const numRate = abb.numero_rate || 1;
+        const importoTotale = abb.importo_totale || 0;
+        const importoRata = Math.floor((importoTotale / numRate) * 100) / 100;
+        const resto = Math.round((importoTotale - importoRata * numRate) * 100) / 100;
+        const today = new Date();
+
+        const rateToInsert = Array.from({ length: numRate }, (_, i) => ({
+          abbonamento_id: data.id,
+          numero_rata: i + 1,
+          importo: i === 0 ? importoRata + resto : importoRata,
+          data_scadenza: format(addMonths(today, i), "yyyy-MM-dd"),
+          stato: "Non pagata",
+        }));
+
+        const { error: rateErr } = await supabase.from("rate").insert(rateToInsert);
+        if (rateErr) throw rateErr;
       }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["abbonamenti"] });
-      toast.success(variables.id ? "Abbonamento aggiornato" : "Abbonamento creato");
+      queryClient.invalidateQueries({ queryKey: ["rate"] });
+      toast.success(variables.id ? "Abbonamento aggiornato" : "Abbonamento creato con rate generate");
       setDialogOpen(false);
       setEditing(null);
     },
@@ -73,6 +111,7 @@ export default function Abbonamenti() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["abbonamenti"] });
+      queryClient.invalidateQueries({ queryKey: ["rate"] });
       toast.success("Abbonamento eliminato");
       setDeleting(null);
     },
@@ -85,6 +124,23 @@ export default function Abbonamenti() {
     return nome.toLowerCase().includes(q) || a.corso.toLowerCase().includes(q) || a.stagione.toLowerCase().includes(q);
   });
 
+  // Global alerts
+  const today = new Date();
+  const rateScadute = allRate.filter(r => r.stato === "Non pagata" && isBefore(parseISO(r.data_scadenza), today));
+  const rateInScadenza = allRate.filter(r => {
+    if (r.stato !== "Non pagata") return false;
+    const scad = parseISO(r.data_scadenza);
+    return !isBefore(scad, today) && isBefore(scad, addDays(today, 7));
+  });
+
+  // Helper: count scadute per abbonamento
+  const scadutePerAbb = rateScadute.reduce<Record<string, number>>((acc, r) => {
+    acc[r.abbonamento_id] = (acc[r.abbonamento_id] || 0) + 1;
+    return acc;
+  }, {});
+
+  const selectedRate = selectedAbb ? (rateByAbb[selectedAbb.id] || []) : [];
+
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-6">
       <div className="flex items-center justify-between">
@@ -96,6 +152,24 @@ export default function Abbonamenti() {
           <Plus className="h-4 w-4 mr-2" /> Nuovo Abbonamento
         </Button>
       </div>
+
+      {/* Global alerts */}
+      {(rateScadute.length > 0 || rateInScadenza.length > 0) && (
+        <div className="space-y-2">
+          {rateScadute.length > 0 && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+              <XCircle className="h-4 w-4 shrink-0" />
+              <span><strong>{rateScadute.length}</strong> rat{rateScadute.length === 1 ? "a scaduta" : "e scadute"} non pagate</span>
+            </div>
+          )}
+          {rateInScadenza.length > 0 && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 text-amber-700 text-sm">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span><strong>{rateInScadenza.length}</strong> rat{rateInScadenza.length === 1 ? "a in scadenza" : "e in scadenza"} entro 7 giorni</span>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -121,34 +195,46 @@ export default function Abbonamenti() {
                 <TableHead>Corso</TableHead>
                 <TableHead>Stagione</TableHead>
                 <TableHead>Stato</TableHead>
-                <TableHead className="text-right">Importo</TableHead>
+                <TableHead className="text-right">Pagato / Totale</TableHead>
                 <TableHead className="hidden md:table-cell text-center">Rate</TableHead>
-                <TableHead className="w-[100px]">Azioni</TableHead>
+                <TableHead className="w-[130px]">Azioni</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((a) => (
-                <TableRow key={a.id}>
-                  <TableCell className="font-medium">{personeMap[a.persona_id] || "—"}</TableCell>
-                  <TableCell>{a.corso}</TableCell>
-                  <TableCell>{a.stagione}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={STATO_COLORS[a.stato_pagamento] || ""}>{a.stato_pagamento}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-medium">€{Number(a.importo_totale).toFixed(2)}</TableCell>
-                  <TableCell className="hidden md:table-cell text-center">{a.numero_rate}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => { setEditing(a); setDialogOpen(true); }}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeleting(a)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filtered.map((a) => {
+                const rate = rateByAbb[a.id] || [];
+                const pagato = rate.filter(r => r.stato === "Pagata").reduce((s, r) => s + Number(r.importo), 0);
+                const hasScadute = (scadutePerAbb[a.id] || 0) > 0;
+                return (
+                  <TableRow key={a.id} className={hasScadute ? "bg-red-500/5" : ""}>
+                    <TableCell className="font-medium">{personeMap[a.persona_id] || "—"}</TableCell>
+                    <TableCell>{a.corso}</TableCell>
+                    <TableCell>{a.stagione}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={STATO_COLORS[a.stato_pagamento] || ""}>{a.stato_pagamento}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      €{pagato.toFixed(2)} / €{Number(a.importo_totale).toFixed(2)}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-center">
+                      {rate.filter(r => r.stato === "Pagata").length}/{rate.length}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => { setSelectedAbb(a); setRateOpen(true); }} title="Vedi rate">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setEditing(a); setDialogOpen(true); }}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleting(a)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
@@ -169,6 +255,17 @@ export default function Abbonamenti() {
         onOpenChange={(open) => { if (!open) setDeleting(null); }}
         onConfirm={() => { if (deleting) deleteMutation.mutate(deleting.id); }}
         isDeleting={deleteMutation.isPending}
+      />
+
+      <RateSheet
+        open={rateOpen}
+        onOpenChange={setRateOpen}
+        abbonamentoId={selectedAbb?.id || null}
+        personaNome={selectedAbb ? (personeMap[selectedAbb.persona_id] || "") : ""}
+        corso={selectedAbb?.corso || ""}
+        importoTotale={Number(selectedAbb?.importo_totale || 0)}
+        rate={selectedRate}
+        personaId={selectedAbb?.persona_id || ""}
       />
     </motion.div>
   );
