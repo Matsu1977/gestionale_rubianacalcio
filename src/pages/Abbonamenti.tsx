@@ -66,27 +66,33 @@ export default function Abbonamenti() {
   }, {});
 
   const upsertMutation = useMutation({
-    mutationFn: async (abb: TablesInsert<"abbonamenti"> & { id?: string }) => {
+    mutationFn: async (abb: TablesInsert<"abbonamenti"> & { id?: string; _tipo_pagamento?: string; _data_inizio?: string }) => {
+      const tipoPagamento = abb._tipo_pagamento || "Pagamento unico";
+      const dataInizio = abb._data_inizio || format(new Date(), "yyyy-MM-dd");
+      // Remove internal fields before sending to DB
+      const { _tipo_pagamento, _data_inizio, ...dbData } = abb as any;
+      const insertData = { ...dbData, tipo_pagamento: tipoPagamento, data_inizio: dataInizio };
+
       if (abb.id) {
-        const { error } = await supabase.from("abbonamenti").update(abb).eq("id", abb.id);
+        const { error } = await supabase.from("abbonamenti").update(insertData).eq("id", abb.id);
         if (error) throw error;
       } else {
-        // Insert abbonamento
-        const { data, error } = await supabase.from("abbonamenti").insert(abb).select().single();
+        const { data, error } = await supabase.from("abbonamenti").insert(insertData).select().single();
         if (error) throw error;
 
-        // Auto-generate rate
+        // Auto-generate rate based on tipo_pagamento
         const numRate = abb.numero_rate || 1;
         const importoTotale = abb.importo_totale || 0;
         const importoRata = Math.floor((importoTotale / numRate) * 100) / 100;
         const resto = Math.round((importoTotale - importoRata * numRate) * 100) / 100;
-        const today = new Date();
+        const start = parseISO(dataInizio);
+        const intervallo = tipoPagamento === "Trimestrale" ? 3 : tipoPagamento === "Quadrimestrale" ? 4 : 0;
 
         const rateToInsert = Array.from({ length: numRate }, (_, i) => ({
           abbonamento_id: data.id,
           numero_rata: i + 1,
           importo: i === 0 ? importoRata + resto : importoRata,
-          data_scadenza: format(addMonths(today, i), "yyyy-MM-dd"),
+          data_scadenza: format(addMonths(start, i * intervallo), "yyyy-MM-dd"),
           stato: "Non pagata",
         }));
 
