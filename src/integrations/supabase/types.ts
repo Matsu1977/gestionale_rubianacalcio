@@ -150,6 +150,44 @@ export type Database = {
         }
         Relationships: []
       }
+      rate: {
+        Row: {
+          abbonamento_id: string
+          created_at: string
+          data_scadenza: string
+          id: string
+          importo: number
+          numero_rata: number
+          stato: string
+        }
+        Insert: {
+          abbonamento_id: string
+          created_at?: string
+          data_scadenza: string
+          id?: string
+          importo?: number
+          numero_rata: number
+          stato?: string
+        }
+        Update: {
+          abbonamento_id?: string
+          created_at?: string
+          data_scadenza?: string
+          id?: string
+          importo?: number
+          numero_rata?: number
+          stato?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rate_abbonamento_id_fkey"
+            columns: ["abbonamento_id"]
+            isOneToOne: false
+            referencedRelation: "abbonamenti"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ruoli: {
         Row: {
           created_at: string
