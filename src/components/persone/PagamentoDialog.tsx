@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 type CategoriaMov = Database["public"]["Enums"]["categoria_movimento"];
 type MetodoPag = Database["public"]["Enums"]["metodo_pagamento"];
 
-const CATEGORIE: CategoriaMov[] = ["Quota socio", "Abbonamento", "Tesseramento", "Altro"];
+const CATEGORIE: CategoriaMov[] = ["Quota socio", "Tesseramento", "Altro"];
 const METODI: MetodoPag[] = ["Contanti", "Bonifico", "Carta", "Satispay", "Altro"];
 
 const schema = z.object({
@@ -68,8 +68,8 @@ export default function PagamentoDialog({ open, onOpenChange, personaNome, onSav
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Nuovo Pagamento</DialogTitle>
-          <DialogDescription>Registra un pagamento per {personaNome}</DialogDescription>
+          <DialogTitle>Nuovo Movimento</DialogTitle>
+          <DialogDescription>Registra un movimento generico per {personaNome}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
