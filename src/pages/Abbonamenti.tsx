@@ -87,6 +87,7 @@ export default function Abbonamenti() {
         const resto = Math.round((importoTotale - importoRata * numRate) * 100) / 100;
         const start = parseISO(dataInizio);
         const intervallo = tipoPagamento === "Trimestrale" ? 3 : tipoPagamento === "Quadrimestrale" ? 4 : 0;
+        // Trimestrale → 3 rate ogni 3 mesi, Quadrimestrale → 4 rate ogni 4 mesi
 
         const rateToInsert = Array.from({ length: numRate }, (_, i) => ({
           abbonamento_id: data.id,
