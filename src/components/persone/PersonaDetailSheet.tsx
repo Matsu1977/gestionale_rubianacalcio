@@ -120,9 +120,10 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
                 <p className="text-sm text-muted-foreground">Totale: €{totale.toFixed(2)}</p>
               </div>
               <Button size="sm" onClick={() => setPagamentoOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" /> Aggiungi Pagamento
+                <Plus className="h-4 w-4 mr-1" /> Movimento generico
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground">I pagamenti degli abbonamenti si gestiscono dalla sezione Abbonamenti tramite il piano rate.</p>
 
             {movimenti.length === 0 ? (
               <div className="flex flex-col items-center py-8 text-muted-foreground">
