@@ -23,8 +23,8 @@ const STATI = ["Non pagato", "Parziale", "Pagato"];
 
 function getNumeroRate(tipo: string): number {
   switch (tipo) {
-    case "Trimestrale": return 4;
-    case "Quadrimestrale": return 3;
+    case "Trimestrale": return 3;
+    case "Quadrimestrale": return 4;
     case "Pagamento unico": return 1;
     default: return 1;
   }
