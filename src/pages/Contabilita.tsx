@@ -1,16 +1,24 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/types";
 import { motion } from "framer-motion";
-import { Wallet, TrendingUp, TrendingDown, Scale } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, Scale, Plus, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import UscitaDialog from "@/components/contabilita/UscitaDialog";
 
 type Movimento = Tables<"movimenti">;
-type Persona = Tables<"persone">;
+type MetodoPag = Database["public"]["Enums"]["metodo_pagamento"];
 
 export default function Contabilita() {
+  const queryClient = useQueryClient();
+  const [uscitaOpen, setUscitaOpen] = useState(false);
+
   const { data: movimenti = [], isLoading } = useQuery({
     queryKey: ["movimenti-all"],
     queryFn: async () => {
@@ -34,6 +42,46 @@ export default function Contabilita() {
     },
   });
 
+  const addUscitaMutation = useMutation({
+    mutationFn: async (payload: {
+      data: string;
+      importo: number;
+      categoria_spesa: string;
+      descrizione: string;
+      metodo_pagamento: MetodoPag;
+      fornitore: string | null;
+    }) => {
+      const { error } = await supabase.from("movimenti").insert({
+        data: payload.data,
+        importo: payload.importo,
+        tipo: "Uscita",
+        categoria: "Altro",
+        metodo_pagamento: payload.metodo_pagamento,
+        riferimento: payload.fornitore || undefined,
+        note: `[${payload.categoria_spesa}] ${payload.descrizione}`,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["movimenti-all"] });
+      toast.success("Uscita registrata");
+      setUscitaOpen(false);
+    },
+    onError: (e) => toast.error("Errore: " + e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("movimenti").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["movimenti-all"] });
+      toast.success("Movimento eliminato");
+    },
+    onError: (e) => toast.error("Errore: " + e.message),
+  });
+
   const totaleEntrate = movimenti.filter((m) => m.tipo === "Entrata").reduce((s, m) => s + Number(m.importo), 0);
   const totaleUscite = movimenti.filter((m) => m.tipo === "Uscita").reduce((s, m) => s + Number(m.importo), 0);
   const saldo = totaleEntrate - totaleUscite;
@@ -45,12 +93,16 @@ export default function Contabilita() {
       transition={{ duration: 0.3 }}
       className="space-y-6"
     >
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Contabilità</h1>
-        <p className="text-muted-foreground mt-1">Registro entrate, uscite e movimenti finanziari</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Contabilità</h1>
+          <p className="text-muted-foreground mt-1">Registro entrate, uscite e movimenti finanziari</p>
+        </div>
+        <Button onClick={() => setUscitaOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" /> Nuova Uscita
+        </Button>
       </div>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardContent className="flex items-center gap-4 p-5">
@@ -87,7 +139,6 @@ export default function Contabilita() {
         </Card>
       </div>
 
-      {/* Movimenti table */}
       <div className="rounded-lg border bg-card">
         {isLoading ? (
           <div className="flex items-center justify-center py-20 text-muted-foreground">Caricamento...</div>
@@ -105,11 +156,12 @@ export default function Contabilita() {
               <TableRow>
                 <TableHead>Data</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead>Persona</TableHead>
+                <TableHead>Persona / Fornitore</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead className="hidden md:table-cell">Metodo</TableHead>
                 <TableHead className="hidden lg:table-cell">Note</TableHead>
                 <TableHead className="text-right">Importo</TableHead>
+                <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -121,12 +173,19 @@ export default function Contabilita() {
                       {m.tipo}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm">{m.persona_id ? (personeMap[m.persona_id] || "—") : "—"}</TableCell>
+                  <TableCell className="text-sm">
+                    {m.persona_id ? (personeMap[m.persona_id] || "—") : (m.riferimento || "—")}
+                  </TableCell>
                   <TableCell className="text-sm">{m.categoria}</TableCell>
                   <TableCell className="hidden md:table-cell text-sm">{m.metodo_pagamento}</TableCell>
                   <TableCell className="hidden lg:table-cell text-sm text-muted-foreground max-w-[200px] truncate">{m.note || "—"}</TableCell>
                   <TableCell className={`text-right font-medium ${m.tipo === "Entrata" ? "text-green-600" : "text-red-600"}`}>
                     {m.tipo === "Uscita" ? "−" : "+"}€{Number(m.importo).toFixed(2)}
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteMutation.mutate(m.id)}>
+                      <Trash2 className="h-3 w-3 text-destructive" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -134,6 +193,13 @@ export default function Contabilita() {
           </Table>
         )}
       </div>
+
+      <UscitaDialog
+        open={uscitaOpen}
+        onOpenChange={setUscitaOpen}
+        onSave={(data) => addUscitaMutation.mutate(data)}
+        isSaving={addUscitaMutation.isPending}
+      />
     </motion.div>
   );
 }
