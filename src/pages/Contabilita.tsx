@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import UscitaDialog from "@/components/contabilita/UscitaDialog";
+import CategorieSpesaDialog from "@/components/contabilita/CategorieSpesaDialog";
 
 type Movimento = Tables<"movimenti">;
 type MetodoPag = Database["public"]["Enums"]["metodo_pagamento"];
