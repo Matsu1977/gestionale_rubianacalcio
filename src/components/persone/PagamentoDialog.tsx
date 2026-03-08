@@ -37,6 +37,19 @@ interface Props {
 }
 
 export default function PagamentoDialog({ open, onOpenChange, personaNome, onSave, isSaving }: Props) {
+  const { data: categorie = [] } = useQuery({
+    queryKey: ["categorie-spesa", "Entrata"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categorie_spesa")
+        .select("nome")
+        .eq("tipo", "Entrata")
+        .order("nome");
+      if (error) throw error;
+      return data.map((c) => c.nome);
+    },
+  });
+
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
