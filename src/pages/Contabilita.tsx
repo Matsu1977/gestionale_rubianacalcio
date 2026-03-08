@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import type { Database } from "@/integrations/supabase/types";
 import { motion } from "framer-motion";
-import { Wallet, TrendingUp, TrendingDown, Scale, Plus, Trash2 } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, Scale, Plus, Trash2, Settings } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
