@@ -100,9 +100,14 @@ export default function Contabilita() {
           <h1 className="text-3xl font-bold tracking-tight">Contabilità</h1>
           <p className="text-muted-foreground mt-1">Registro entrate, uscite e movimenti finanziari</p>
         </div>
-        <Button onClick={() => setUscitaOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" /> Nuova Uscita
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setCategorieOpen(true)}>
+            <Settings className="h-4 w-4 mr-2" /> Categorie
+          </Button>
+          <Button onClick={() => setUscitaOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" /> Nuova Uscita
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
