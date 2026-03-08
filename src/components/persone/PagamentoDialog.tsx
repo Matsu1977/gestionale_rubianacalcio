@@ -102,7 +102,7 @@ export default function PagamentoDialog({ open, onOpenChange, personaNome, onSav
                     <SelectTrigger><SelectValue placeholder="Seleziona categoria" /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {CATEGORIE.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {categorie.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <FormMessage />
