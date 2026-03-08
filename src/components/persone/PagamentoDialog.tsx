@@ -1,6 +1,8 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -14,7 +16,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 type CategoriaMov = Database["public"]["Enums"]["categoria_movimento"];
 type MetodoPag = Database["public"]["Enums"]["metodo_pagamento"];
 
-const CATEGORIE: CategoriaMov[] = ["Quota socio", "Tesseramento", "Altro"];
 const METODI: MetodoPag[] = ["Contanti", "Bonifico", "Carta", "Satispay", "Altro"];
 
 const schema = z.object({
