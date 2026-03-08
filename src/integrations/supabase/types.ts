@@ -61,6 +61,24 @@ export type Database = {
           },
         ]
       }
+      categorie_spesa: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       movimenti: {
         Row: {
           categoria: Database["public"]["Enums"]["categoria_movimento"]
