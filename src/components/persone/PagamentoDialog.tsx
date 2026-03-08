@@ -1,6 +1,8 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -14,7 +16,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 type CategoriaMov = Database["public"]["Enums"]["categoria_movimento"];
 type MetodoPag = Database["public"]["Enums"]["metodo_pagamento"];
 
-const CATEGORIE: CategoriaMov[] = ["Quota socio", "Tesseramento", "Altro"];
 const METODI: MetodoPag[] = ["Contanti", "Bonifico", "Carta", "Satispay", "Altro"];
 
 const schema = z.object({
@@ -36,6 +37,19 @@ interface Props {
 }
 
 export default function PagamentoDialog({ open, onOpenChange, personaNome, onSave, isSaving }: Props) {
+  const { data: categorie = [] } = useQuery({
+    queryKey: ["categorie-spesa", "Entrata"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categorie_spesa")
+        .select("nome")
+        .eq("tipo", "Entrata")
+        .order("nome");
+      if (error) throw error;
+      return data.map((c) => c.nome);
+    },
+  });
+
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -88,7 +102,7 @@ export default function PagamentoDialog({ open, onOpenChange, personaNome, onSav
                     <SelectTrigger><SelectValue placeholder="Seleziona categoria" /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {CATEGORIE.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {categorie.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <FormMessage />

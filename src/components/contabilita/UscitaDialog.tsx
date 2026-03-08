@@ -44,9 +44,13 @@ interface Props {
 
 export default function UscitaDialog({ open, onOpenChange, onSave, isSaving }: Props) {
   const { data: categorie = [] } = useQuery({
-    queryKey: ["categorie-spesa"],
+    queryKey: ["categorie-spesa", "Uscita"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("categorie_spesa").select("nome").order("nome");
+      const { data, error } = await supabase
+        .from("categorie_spesa")
+        .select("nome")
+        .eq("tipo", "Uscita")
+        .order("nome");
       if (error) throw error;
       return data.map((c) => c.nome);
     },
