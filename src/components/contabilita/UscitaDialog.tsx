@@ -114,7 +114,7 @@ export default function UscitaDialog({ open, onOpenChange, onSave, isSaving }: P
                     <SelectTrigger><SelectValue placeholder="Seleziona categoria" /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {CATEGORIE_USCITA.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {categorie.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <FormMessage />
