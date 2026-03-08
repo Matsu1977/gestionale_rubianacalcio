@@ -43,6 +43,15 @@ interface Props {
 }
 
 export default function UscitaDialog({ open, onOpenChange, onSave, isSaving }: Props) {
+  const { data: categorie = [] } = useQuery({
+    queryKey: ["categorie-spesa"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("categorie_spesa").select("nome").order("nome");
+      if (error) throw error;
+      return data.map((c) => c.nome);
+    },
+  });
+
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
