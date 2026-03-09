@@ -71,6 +71,7 @@ export default function Dashboard() {
       const { data } = await supabase.from("movimenti").select("*").order("data", { ascending: false }).limit(10);
       return data || [];
     },
+    enabled: !isAllenatore,
   });
 
   const { data: allMovimenti } = useQuery({
@@ -79,6 +80,7 @@ export default function Dashboard() {
       const { data } = await supabase.from("movimenti").select("tipo, importo");
       return data || [];
     },
+    enabled: !isAllenatore,
   });
 
   const { data: personeMap } = useQuery({
