@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import {
-  Settings, Users, Shield, UserCog, Trash2, Loader2, KeyRound, Ban, CheckCircle2, UserPlus, Link, Unlink,
+  Settings, Users, Shield, UserCog, Trash2, Loader2, KeyRound, Ban, CheckCircle2, UserPlus, Link, Unlink, CreditCard,
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import PaymentSettingsCard from "@/components/impostazioni/PaymentSettingsCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -196,145 +198,164 @@ export default function Impostazioni() {
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserCog className="h-5 w-5" />
-            Utenti registrati
-          </CardTitle>
-          <CardDescription>Gestisci ruoli, password, stato e collegamento anagrafica.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Ruolo</TableHead>
-                    <TableHead>Anagrafica</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((u) => (
-                    <TableRow key={u.id} className={!u.is_active ? "opacity-50" : ""}>
-                      <TableCell className="font-medium">{u.email}</TableCell>
-                      <TableCell>{u.full_name}</TableCell>
-                      <TableCell>
-                        <Select
-                          value={u.role || ""}
-                          onValueChange={(val) => updateRoleMutation.mutate({ userId: u.id, role: val })}
-                        >
-                          <SelectTrigger className="w-[150px]">
-                            <SelectValue placeholder="Nessun ruolo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">
-                              <div className="flex items-center gap-2"><Shield className="h-3.5 w-3.5" /> Admin</div>
-                            </SelectItem>
-                            <SelectItem value="segreteria">
-                              <div className="flex items-center gap-2"><Users className="h-3.5 w-3.5" /> Segreteria</div>
-                            </SelectItem>
-                            <SelectItem value="allenatore">
-                              <div className="flex items-center gap-2"><UserCog className="h-3.5 w-3.5" /> Allenatore</div>
-                            </SelectItem>
-                            <SelectItem value="atleta">
-                              <div className="flex items-center gap-2"><UserCog className="h-3.5 w-3.5" /> Atleta</div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        {u.persona_nome ? (
-                          <div className="flex items-center gap-1">
-                            <span className="text-sm">{u.persona_nome}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                              title="Scollega"
-                              onClick={() => unlinkPersonaMutation.mutate(u.id)}
+      <Tabs defaultValue="utenti" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="utenti" className="gap-2">
+            <UserCog className="h-4 w-4" />
+            Utenti
+          </TabsTrigger>
+          <TabsTrigger value="pagamenti" className="gap-2">
+            <CreditCard className="h-4 w-4" />
+            Pagamenti
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="utenti">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCog className="h-5 w-5" />
+                Utenti registrati
+              </CardTitle>
+              <CardDescription>Gestisci ruoli, password, stato e collegamento anagrafica.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Ruolo</TableHead>
+                        <TableHead>Anagrafica</TableHead>
+                        <TableHead>Stato</TableHead>
+                        <TableHead className="text-right">Azioni</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.map((u) => (
+                        <TableRow key={u.id} className={!u.is_active ? "opacity-50" : ""}>
+                          <TableCell className="font-medium">{u.email}</TableCell>
+                          <TableCell>{u.full_name}</TableCell>
+                          <TableCell>
+                            <Select
+                              value={u.role || ""}
+                              onValueChange={(val) => updateRoleMutation.mutate({ userId: u.id, role: val })}
                             >
-                              <Unlink className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        ) : (
-                          u.role === "atleta" ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => { setShowLinkDialog(u); setSelectedPersonaId(""); }}
-                            >
-                              <Link className="mr-1 h-3 w-3" />
-                              Collega
-                            </Button>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={u.is_active ? "border-green-500/30 text-green-700 bg-green-500/10" : "border-destructive/30 text-destructive bg-destructive/10"}>
-                          {u.is_active ? "Attivo" : "Disattivato"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Modifica password"
-                            onClick={() => setShowPasswordDialog(u.id)}
-                          >
-                            <KeyRound className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title={u.is_active ? "Disattiva" : "Riattiva"}
-                            onClick={() => toggleActiveMutation.mutate({ userId: u.id, isActive: !u.is_active })}
-                          >
-                            {u.is_active ? <Ban className="h-4 w-4 text-destructive" /> : <CheckCircle2 className="h-4 w-4 text-green-600" />}
-                          </Button>
-                          {u.role && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                  <Trash2 className="h-4 w-4" />
+                              <SelectTrigger className="w-[150px]">
+                                <SelectValue placeholder="Nessun ruolo" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="admin">
+                                  <div className="flex items-center gap-2"><Shield className="h-3.5 w-3.5" /> Admin</div>
+                                </SelectItem>
+                                <SelectItem value="segreteria">
+                                  <div className="flex items-center gap-2"><Users className="h-3.5 w-3.5" /> Segreteria</div>
+                                </SelectItem>
+                                <SelectItem value="allenatore">
+                                  <div className="flex items-center gap-2"><UserCog className="h-3.5 w-3.5" /> Allenatore</div>
+                                </SelectItem>
+                                <SelectItem value="atleta">
+                                  <div className="flex items-center gap-2"><UserCog className="h-3.5 w-3.5" /> Atleta</div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            {u.persona_nome ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-sm">{u.persona_nome}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                  title="Scollega"
+                                  onClick={() => unlinkPersonaMutation.mutate(u.id)}
+                                >
+                                  <Unlink className="h-3.5 w-3.5" />
                                 </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Rimuovere il ruolo?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    L'utente {u.email} non potrà più accedere al gestionale.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Annulla</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => removeRoleMutation.mutate(u.id)}>Rimuovi</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                              </div>
+                            ) : (
+                              u.role === "atleta" ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => { setShowLinkDialog(u); setSelectedPersonaId(""); }}
+                                >
+                                  <Link className="mr-1 h-3 w-3" />
+                                  Collega
+                                </Button>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={u.is_active ? "border-green-500/30 text-green-700 bg-green-500/10" : "border-destructive/30 text-destructive bg-destructive/10"}>
+                              {u.is_active ? "Attivo" : "Disattivato"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Modifica password"
+                                onClick={() => setShowPasswordDialog(u.id)}
+                              >
+                                <KeyRound className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title={u.is_active ? "Disattiva" : "Riattiva"}
+                                onClick={() => toggleActiveMutation.mutate({ userId: u.id, isActive: !u.is_active })}
+                              >
+                                {u.is_active ? <Ban className="h-4 w-4 text-destructive" /> : <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                              </Button>
+                              {u.role && (
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Rimuovere il ruolo?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        L'utente {u.email} non potrà più accedere al gestionale.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Annulla</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => removeRoleMutation.mutate(u.id)}>Rimuovi</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pagamenti">
+          <PaymentSettingsCard />
+        </TabsContent>
+      </Tabs>
 
       {/* Create User Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>

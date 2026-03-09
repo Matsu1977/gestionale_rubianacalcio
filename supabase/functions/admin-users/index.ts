@@ -157,6 +157,64 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "check_stripe_status") {
+      const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+      if (!stripeKey) {
+        return new Response(JSON.stringify({ connected: false, mode: "unknown" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const mode = stripeKey.startsWith("sk_live_") ? "live" : stripeKey.startsWith("sk_test_") ? "test" : "unknown";
+      // Quick validation by calling Stripe balance endpoint
+      try {
+        const res = await fetch("https://api.stripe.com/v1/balance", {
+          headers: { Authorization: `Bearer ${stripeKey}` },
+        });
+        const connected = res.ok;
+        return new Response(JSON.stringify({ connected, mode }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch {
+        return new Response(JSON.stringify({ connected: false, mode }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    if (action === "update_stripe_keys") {
+      // This action updates secrets - we store them via Supabase Vault
+      // For now, we validate the key format and return instructions
+      const { stripe_key, webhook_secret } = params;
+      
+      if (stripe_key) {
+        if (!stripe_key.startsWith("sk_test_") && !stripe_key.startsWith("sk_live_")) {
+          throw new Error("La chiave deve iniziare con sk_test_ o sk_live_");
+        }
+        // Validate by calling Stripe
+        const res = await fetch("https://api.stripe.com/v1/balance", {
+          headers: { Authorization: `Bearer ${stripe_key}` },
+        });
+        if (!res.ok) throw new Error("Chiave Stripe non valida. Verifica e riprova.");
+      }
+
+      if (webhook_secret && !webhook_secret.startsWith("whsec_")) {
+        throw new Error("Il webhook secret deve iniziare con whsec_");
+      }
+
+      // Return that keys need to be updated via secrets management
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: "Chiavi validate. Aggiorna i secrets dal pannello Lovable Cloud.",
+        needs_secret_update: true,
+        keys_to_update: {
+          ...(stripe_key ? { STRIPE_SECRET_KEY: true } : {}),
+          ...(webhook_secret ? { STRIPE_WEBHOOK_SECRET: true } : {}),
+        }
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     throw new Error(`Azione non supportata: ${action}`);
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {
