@@ -9,9 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Receipt, Trash2 } from "lucide-react";
+import { Plus, Receipt, Trash2, FileSignature } from "lucide-react";
 import { toast } from "sonner";
 import PagamentoDialog from "./PagamentoDialog";
+import DocumentoFirmaDialog from "./DocumentoFirmaDialog";
+import DocumentiList from "./DocumentiList";
 
 type Persona = Tables<"persone">;
 type TipoRuolo = Database["public"]["Enums"]["tipo_ruolo"];
