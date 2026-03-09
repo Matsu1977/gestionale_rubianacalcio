@@ -15,7 +15,32 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-    // Verify caller is admin
+    const { action, ...params } = await req.json();
+
+    // Bootstrap: allow creating first admin if no admins exist
+    if (action === "bootstrap") {
+      const { data: existingAdmins } = await supabaseAdmin
+        .from("user_roles")
+        .select("id")
+        .eq("role", "admin")
+        .limit(1);
+      if (existingAdmins && existingAdmins.length > 0) {
+        throw new Error("Un admin esiste già. Usa il login.");
+      }
+      const { email, password, full_name } = params;
+      if (!email || !password) throw new Error("Email e password obbligatorie");
+      const { data: newUser, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+        email, password, email_confirm: true,
+        user_metadata: { full_name: full_name || email },
+      });
+      if (createErr) throw createErr;
+      await supabaseAdmin.from("user_roles").insert({ user_id: newUser.user.id, role: "admin" });
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Verify caller is admin for all other actions
     const authHeader = req.headers.get("Authorization")!;
     const token = authHeader.replace("Bearer ", "");
     const { data: { user: caller } } = await supabaseAdmin.auth.getUser(token);
@@ -23,8 +48,6 @@ Deno.serve(async (req) => {
 
     const { data: callerRole } = await supabaseAdmin.rpc("get_user_role", { _user_id: caller.id });
     if (callerRole !== "admin") throw new Error("Non autorizzato");
-
-    const { action, ...params } = await req.json();
 
     if (action === "create_user") {
       const { email, password, full_name, role } = params;
