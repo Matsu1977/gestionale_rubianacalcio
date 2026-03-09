@@ -297,6 +297,21 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
                 </TabsContent>
               </Tabs>
             )}
+
+            <Separator />
+
+            {/* Documenti Firmati */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold">Documenti Firmati</h3>
+                <p className="text-sm text-muted-foreground">Moduli firmati digitalmente</p>
+              </div>
+              <Button size="sm" onClick={() => setFirmaOpen(true)}>
+                <FileSignature className="h-4 w-4 mr-1" /> Genera e firma
+              </Button>
+            </div>
+
+            <DocumentiList personaId={persona.id} />
           </div>
         </SheetContent>
       </Sheet>
@@ -307,6 +322,12 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
         personaNome={`${persona.nome} ${persona.cognome}`}
         onSave={(data) => addMutation.mutate(data)}
         isSaving={addMutation.isPending}
+      />
+
+      <DocumentoFirmaDialog
+        open={firmaOpen}
+        onOpenChange={setFirmaOpen}
+        persona={persona}
       />
     </>
   );
