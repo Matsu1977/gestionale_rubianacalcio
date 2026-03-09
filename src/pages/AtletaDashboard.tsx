@@ -7,6 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format, parseISO, isBefore } from "date-fns";
 import { it } from "date-fns/locale";
+import { RateListCard } from "@/components/atleta/RateListCard";
+import { useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 
 const container = {
   hidden: { opacity: 0 },
@@ -19,6 +23,22 @@ const item = {
 
 export default function AtletaDashboard() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Handle payment result from Stripe redirect
+  useEffect(() => {
+    const paymentStatus = searchParams.get("payment");
+    if (paymentStatus === "success") {
+      toast.success("Pagamento completato con successo!");
+      searchParams.delete("payment");
+      searchParams.delete("rata_id");
+      setSearchParams(searchParams, { replace: true });
+    } else if (paymentStatus === "cancelled") {
+      toast.info("Pagamento annullato");
+      searchParams.delete("payment");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Get persona linked to this user
   const { data: persona } = useQuery({
@@ -35,7 +55,7 @@ export default function AtletaDashboard() {
   });
 
   // Get abbonamenti for this persona
-  const { data: abbonamenti } = useQuery({
+  const { data: abbonamenti, refetch: refetchAbbonamenti } = useQuery({
     queryKey: ["atleta-abbonamenti", persona?.id],
     queryFn: async () => {
       const { data } = await supabase
@@ -49,7 +69,7 @@ export default function AtletaDashboard() {
   });
 
   // Get rate for abbonamenti
-  const { data: rate } = useQuery({
+  const { data: rate, refetch: refetchRate } = useQuery({
     queryKey: ["atleta-rate", persona?.id],
     queryFn: async () => {
       const abbIds = (abbonamenti || []).map((a) => a.id);
@@ -63,6 +83,15 @@ export default function AtletaDashboard() {
     },
     enabled: !!abbonamenti && abbonamenti.length > 0,
   });
+
+  // Refetch after payment success
+  useEffect(() => {
+    const paymentStatus = searchParams.get("payment");
+    if (paymentStatus === "success") {
+      refetchAbbonamenti();
+      refetchRate();
+    }
+  }, [searchParams, refetchAbbonamenti, refetchRate]);
 
   // Get movimenti (pagamenti) for this persona
   const { data: movimenti } = useQuery({
@@ -149,7 +178,11 @@ export default function AtletaDashboard() {
     );
   }
 
-  const abbAttivo = (abbonamenti || []).find((a) => a.stato_pagamento !== "Scaduto");
+  // Group rate by abbonamento
+  const rateByAbbonamento = (abbonamenti || []).map((abb) => ({
+    abbonamento: abb,
+    rate: (rate || []).filter((r) => r.abbonamento_id === abb.id),
+  })).filter((item) => item.rate.length > 0);
 
   return (
     <div className="space-y-8">
@@ -265,8 +298,18 @@ export default function AtletaDashboard() {
         </motion.div>
       </motion.div>
 
+      {/* Rate con pagamento online */}
+      {rateByAbbonamento.length > 0 && (
+        <motion.div variants={item} initial="hidden" animate="show" className="space-y-4">
+          <h2 className="text-xl font-semibold">Le mie Rate</h2>
+          {rateByAbbonamento.map(({ abbonamento, rate }) => (
+            <RateListCard key={abbonamento.id} rate={rate} abbonamento={abbonamento} />
+          ))}
+        </motion.div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Abbonamento e Rate */}
+        {/* Abbonamento info */}
         <motion.div variants={item} initial="hidden" animate="show">
           <Card className="glass-card">
             <CardHeader className="pb-3">
@@ -276,44 +319,29 @@ export default function AtletaDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {abbAttivo ? (
-                <>
-                  <div className="space-y-2 text-sm">
+              {(abbonamenti || []).length > 0 ? (
+                abbonamenti!.map((abb) => (
+                  <div key={abb.id} className="space-y-2 text-sm p-3 rounded-lg bg-muted/50">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Corso</span>
-                      <span className="font-medium">{abbAttivo.corso}</span>
+                      <span className="font-medium">{abb.corso}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Stagione</span>
-                      <span>{abbAttivo.stagione}</span>
+                      <span>{abb.stagione}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Importo</span>
-                      <span>€ {Number(abbAttivo.importo_totale).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</span>
+                      <span>€ {Number(abb.importo_totale).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Stato</span>
-                      <Badge variant={abbAttivo.stato_pagamento === "Pagato" ? "default" : "secondary"}>
-                        {abbAttivo.stato_pagamento}
+                      <Badge variant={abb.stato_pagamento === "Pagato" ? "default" : "secondary"}>
+                        {abb.stato_pagamento}
                       </Badge>
                     </div>
                   </div>
-                  {rate && rate.filter((r) => r.abbonamento_id === abbAttivo.id).length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Piano Rate</p>
-                      {rate
-                        .filter((r) => r.abbonamento_id === abbAttivo.id)
-                        .map((r) => (
-                          <div key={r.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 text-sm">
-                            <span>Rata {r.numero_rata} - {format(parseISO(r.data_scadenza), "dd/MM/yyyy")}</span>
-                            <Badge variant={r.stato === "Pagata" ? "default" : "secondary"} className="text-xs">
-                              {r.stato}
-                            </Badge>
-                          </div>
-                        ))}
-                    </div>
-                  )}
-                </>
+                ))
               ) : (
                 <p className="text-sm text-muted-foreground">Nessun abbonamento attivo</p>
               )}
