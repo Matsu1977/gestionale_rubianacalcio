@@ -100,21 +100,14 @@ export default function Login() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {mode === "login" && "Accedi"}
-              {mode === "signup" && "Registrati"}
               {mode === "forgot" && "Invia email di reset"}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm space-y-1">
             {mode === "login" && (
-              <>
-                <button onClick={() => setMode("forgot")} className="text-muted-foreground hover:text-foreground underline">Password dimenticata?</button>
-                <p className="text-muted-foreground">
-                  Non hai un account?{" "}
-                  <button onClick={() => setMode("signup")} className="text-primary hover:underline font-medium">Registrati</button>
-                </p>
-              </>
+              <button onClick={() => setMode("forgot")} className="text-muted-foreground hover:text-foreground underline">Password dimenticata?</button>
             )}
-            {(mode === "signup" || mode === "forgot") && (
+            {mode === "forgot" && (
               <button onClick={() => setMode("login")} className="text-primary hover:underline font-medium">Torna al login</button>
             )}
           </div>
