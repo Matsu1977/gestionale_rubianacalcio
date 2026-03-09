@@ -278,6 +278,45 @@ export type Database = {
         }
         Relationships: []
       }
+      presenze: {
+        Row: {
+          created_at: string
+          id: string
+          persona_id: string
+          presente: boolean
+          sessione_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          persona_id: string
+          presente?: boolean
+          sessione_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          persona_id?: string
+          presente?: boolean
+          sessione_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presenze_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "persone"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "presenze_sessione_id_fkey"
+            columns: ["sessione_id"]
+            isOneToOne: false
+            referencedRelation: "sessioni_allenamento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -374,6 +413,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sessioni_allenamento: {
+        Row: {
+          corso: string
+          created_at: string
+          data: string
+          id: string
+          note: string | null
+        }
+        Insert: {
+          corso: string
+          created_at?: string
+          data?: string
+          id?: string
+          note?: string | null
+        }
+        Update: {
+          corso?: string
+          created_at?: string
+          data?: string
+          id?: string
+          note?: string | null
+        }
+        Relationships: []
       }
       tesseramenti: {
         Row: {
