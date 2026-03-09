@@ -10,6 +10,7 @@ import {
   Shield,
   Settings,
   LogOut,
+  ClipboardCheck,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -39,6 +40,7 @@ const allMenuItems = [
   { title: "Contabilità", url: "/contabilita", icon: Wallet, roles: ["admin", "segreteria"] },
   { title: "Comunicazioni", url: "/comunicazioni", icon: MessageSquare, roles: ["admin", "segreteria", "allenatore"] },
   { title: "Report", url: "/report", icon: BarChart3, roles: ["admin", "segreteria"] },
+  { title: "Presenze", url: "/presenze", icon: ClipboardCheck, roles: ["admin", "segreteria", "allenatore"] },
   { title: "Impostazioni", url: "/impostazioni", icon: Settings, roles: ["admin"] },
 ];
 

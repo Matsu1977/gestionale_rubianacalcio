@@ -13,6 +13,7 @@ import Soci from "./pages/Soci";
 import Contabilita from "./pages/Contabilita";
 import Comunicazioni from "./pages/Comunicazioni";
 import Report from "./pages/Report";
+import Presenze from "./pages/Presenze";
 import Impostazioni from "./pages/Impostazioni";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
@@ -61,6 +62,7 @@ function ProtectedRoutes() {
         {hasFullAccess && <Route path="/soci" element={<Soci />} />}
         {hasFullAccess && <Route path="/contabilita" element={<Contabilita />} />}
         {hasFullAccess && <Route path="/report" element={<Report />} />}
+        <Route path="/presenze" element={<Presenze />} />
         {isAdmin && <Route path="/impostazioni" element={<Impostazioni />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
