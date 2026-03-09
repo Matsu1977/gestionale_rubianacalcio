@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import type { Database } from "@/integrations/supabase/types";
 import { motion } from "framer-motion";
-import { Plus, Pencil, Trash2, Search, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Users, ShieldCheck, ShieldX, CheckCircle2, XCircle, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +60,36 @@ export default function Persone() {
       return map;
     },
   });
+
+  // Fetch abbonamenti for status indicators
+  const { data: abbonamenti = [] } = useQuery({
+    queryKey: ["abbonamenti-lista"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("abbonamenti").select("persona_id, stato_pagamento, stagione");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const abbonamentiMap = useMemo(() => {
+    const map: Record<string, { attivo: boolean }> = {};
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    // Stagione corrente: se siamo da settembre in poi è YYYY/(YYYY+1), altrimenti (YYYY-1)/YYYY
+    const startYear = currentMonth >= 8 ? currentYear : currentYear - 1;
+    const currentStagione = `${startYear}/${startYear + 1}`;
+
+    for (const a of abbonamenti) {
+      const isCurrentSeason = a.stagione === currentStagione;
+      if (isCurrentSeason) {
+        map[a.persona_id] = { attivo: true };
+      } else if (!map[a.persona_id]) {
+        map[a.persona_id] = { attivo: false };
+      }
+    }
+    return map;
+  }, [abbonamenti]);
 
   const upsertMutation = useMutation({
     mutationFn: async ({ persona, ruoli }: { persona: TablesInsert<"persone"> & { id?: string }; ruoli: TipoRuolo[] }) => {
@@ -169,52 +199,70 @@ export default function Persone() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Ruoli</TableHead>
                 <TableHead className="hidden md:table-cell">Telefono</TableHead>
-                <TableHead className="hidden lg:table-cell">Email</TableHead>
-                <TableHead className="hidden lg:table-cell">Cert. Medico</TableHead>
+                <TableHead className="text-center">Cert. Medico</TableHead>
+                <TableHead className="text-center">Abbonamento</TableHead>
                 <TableHead className="w-[100px]">Azioni</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((persona) => (
-                <TableRow key={persona.id} className="cursor-pointer" onClick={() => setDetailPersona(persona)}>
-                  <TableCell className="font-medium">{persona.cognome}</TableCell>
-                  <TableCell>{persona.nome}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {(ruoliMap[persona.id] || []).map((ruolo) => (
-                        <Badge key={ruolo} variant="outline" className={RUOLO_COLORS[ruolo]}>
-                          {ruolo}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">{persona.telefono || "—"}</TableCell>
-                  <TableCell className="hidden lg:table-cell">{persona.email || "—"}</TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    {persona.certificato_medico_scadenza
-                      ? new Date(persona.certificato_medico_scadenza).toLocaleDateString("it-IT")
-                      : "—"}
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => { setEditingPersona(persona); setDialogOpen(true); }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeletingPersona(persona)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filtered.map((persona) => {
+                const certScadenza = persona.certificato_medico_scadenza;
+                const certValid = certScadenza ? new Date(certScadenza) >= new Date() : null;
+                const abbInfo = abbonamentiMap[persona.id];
+
+                return (
+                  <TableRow key={persona.id} className="cursor-pointer" onClick={() => setDetailPersona(persona)}>
+                    <TableCell className="font-medium">{persona.cognome}</TableCell>
+                    <TableCell>{persona.nome}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {(ruoliMap[persona.id] || []).map((ruolo) => (
+                          <Badge key={ruolo} variant="outline" className={RUOLO_COLORS[ruolo]}>
+                            {ruolo}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">{persona.telefono || "—"}</TableCell>
+                    <TableCell className="text-center">
+                      {certValid === null ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Minus className="h-4 w-4" /> N/D</span>
+                      ) : certValid ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-green-600"><ShieldCheck className="h-4 w-4" /> Valido</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs text-red-600"><ShieldX className="h-4 w-4" /> Scaduto</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {!abbInfo ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Minus className="h-4 w-4" /> N/D</span>
+                      ) : abbInfo.attivo ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-green-600"><CheckCircle2 className="h-4 w-4" /> Attivo</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs text-red-600"><XCircle className="h-4 w-4" /> Scaduto</span>
+                      )}
+                    </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => { setEditingPersona(persona); setDialogOpen(true); }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeletingPersona(persona)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
