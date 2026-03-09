@@ -8,9 +8,12 @@ import {
   MessageSquare,
   BarChart3,
   Shield,
+  Settings,
+  LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Sidebar,
   SidebarContent,
@@ -24,22 +27,28 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
-const menuItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Persone", url: "/persone", icon: Users },
-  { title: "Tesseramenti", url: "/tesseramenti", icon: IdCard },
-  { title: "Abbonamenti", url: "/abbonamenti", icon: CalendarCheck },
-  { title: "Soci", url: "/soci", icon: Heart },
-  { title: "Contabilità", url: "/contabilita", icon: Wallet },
-  { title: "Comunicazioni", url: "/comunicazioni", icon: MessageSquare },
-  { title: "Report", url: "/report", icon: BarChart3 },
+const allMenuItems = [
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, roles: ["admin", "allenatore"] },
+  { title: "Persone", url: "/persone", icon: Users, roles: ["admin"] },
+  { title: "Tesseramenti", url: "/tesseramenti", icon: IdCard, roles: ["admin"] },
+  { title: "Abbonamenti", url: "/abbonamenti", icon: CalendarCheck, roles: ["admin", "allenatore"] },
+  { title: "Soci", url: "/soci", icon: Heart, roles: ["admin"] },
+  { title: "Contabilità", url: "/contabilita", icon: Wallet, roles: ["admin"] },
+  { title: "Comunicazioni", url: "/comunicazioni", icon: MessageSquare, roles: ["admin", "allenatore"] },
+  { title: "Report", url: "/report", icon: BarChart3, roles: ["admin"] },
+  { title: "Impostazioni", url: "/impostazioni", icon: Settings, roles: ["admin"] },
 ];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const { role, user, signOut } = useAuth();
+
+  const menuItems = allMenuItems.filter((item) => role && item.roles.includes(role));
 
   return (
     <Sidebar collapsible="icon">
@@ -88,7 +97,35 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4">
+      <SidebarFooter className="p-4 space-y-3">
+        {!collapsed && role && (
+          <div className="flex items-center justify-center">
+            <Badge variant="outline" className="text-[10px] border-sidebar-border text-sidebar-foreground/60">
+              {role === "admin" ? "Amministratore" : "Allenatore"}
+            </Badge>
+          </div>
+        )}
+        {!collapsed && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60"
+            onClick={signOut}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Esci
+          </Button>
+        )}
+        {collapsed && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="w-full text-sidebar-foreground/60 hover:text-sidebar-foreground"
+            onClick={signOut}
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        )}
         {!collapsed && (
           <p className="text-[11px] text-sidebar-foreground/40 text-center">
             Stagione 2025/2026
