@@ -222,27 +222,29 @@ export default function Dashboard() {
           </Card>
         </motion.div>
 
-        <motion.div variants={item} initial="hidden" animate="show">
-          <Card className="glass-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Ultimi Movimenti</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {recentMovements.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nessun movimento registrato</p>
-              ) : (
-                recentMovements.map((mov, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/30 transition-colors">
-                    <span className="text-sm">{mov.desc}</span>
-                    <span className={`text-sm font-semibold ${mov.type === "entrata" ? "text-success" : "text-destructive"}`}>
-                      {mov.amount}
-                    </span>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
+        {!isAllenatore && (
+          <motion.div variants={item} initial="hidden" animate="show">
+            <Card className="glass-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Ultimi Movimenti</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {recentMovements.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nessun movimento registrato</p>
+                ) : (
+                  recentMovements.map((mov, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/30 transition-colors">
+                      <span className="text-sm">{mov.desc}</span>
+                      <span className={`text-sm font-semibold ${mov.type === "entrata" ? "text-success" : "text-destructive"}`}>
+                        {mov.amount}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
       </div>
     </div>
   );
