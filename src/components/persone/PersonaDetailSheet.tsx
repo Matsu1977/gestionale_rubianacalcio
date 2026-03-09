@@ -9,9 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Receipt, Trash2 } from "lucide-react";
+import { Plus, Receipt, Trash2, FileSignature } from "lucide-react";
 import { toast } from "sonner";
 import PagamentoDialog from "./PagamentoDialog";
+import DocumentoFirmaDialog from "./DocumentoFirmaDialog";
+import DocumentiList from "./DocumentiList";
 
 type Persona = Tables<"persone">;
 type TipoRuolo = Database["public"]["Enums"]["tipo_ruolo"];
@@ -47,6 +49,7 @@ interface Props {
 export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
   const queryClient = useQueryClient();
   const [pagamentoOpen, setPagamentoOpen] = useState(false);
+  const [firmaOpen, setFirmaOpen] = useState(false);
 
   const { data: movimenti = [] } = useQuery({
     queryKey: ["movimenti", persona?.id],
@@ -294,6 +297,21 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
                 </TabsContent>
               </Tabs>
             )}
+
+            <Separator />
+
+            {/* Documenti Firmati */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold">Documenti Firmati</h3>
+                <p className="text-sm text-muted-foreground">Moduli firmati digitalmente</p>
+              </div>
+              <Button size="sm" onClick={() => setFirmaOpen(true)}>
+                <FileSignature className="h-4 w-4 mr-1" /> Genera e firma
+              </Button>
+            </div>
+
+            <DocumentiList personaId={persona.id} />
           </div>
         </SheetContent>
       </Sheet>
@@ -304,6 +322,12 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
         personaNome={`${persona.nome} ${persona.cognome}`}
         onSave={(data) => addMutation.mutate(data)}
         isSaving={addMutation.isPending}
+      />
+
+      <DocumentoFirmaDialog
+        open={firmaOpen}
+        onOpenChange={setFirmaOpen}
+        persona={persona}
       />
     </>
   );
