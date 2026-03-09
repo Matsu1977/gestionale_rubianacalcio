@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     const body = await req.text();
     
     if (webhookSecret) {
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
     } else {
       // For testing without webhook secret
       event = JSON.parse(body);
