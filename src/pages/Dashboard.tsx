@@ -122,13 +122,13 @@ export default function Dashboard() {
       color: "text-accent",
       bgColor: "bg-accent/10",
     },
-    {
+    ...(!isAllenatore ? [{
       title: "Saldo Cassa",
       value: `€ ${saldo.toLocaleString("it-IT", { minimumFractionDigits: 2 })}`,
       icon: Wallet,
       color: "text-primary",
       bgColor: "bg-primary/10",
-    },
+    }] : []),
   ];
 
   // Alerts
