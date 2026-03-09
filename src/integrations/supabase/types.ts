@@ -145,6 +145,44 @@ export type Database = {
           },
         ]
       }
+      documenti_firmati: {
+        Row: {
+          created_at: string
+          data_firma: string
+          file_path: string
+          id: string
+          nome_persona: string
+          persona_id: string
+          tipo_documento: string
+        }
+        Insert: {
+          created_at?: string
+          data_firma?: string
+          file_path: string
+          id?: string
+          nome_persona: string
+          persona_id: string
+          tipo_documento: string
+        }
+        Update: {
+          created_at?: string
+          data_firma?: string
+          file_path?: string
+          id?: string
+          nome_persona?: string
+          persona_id?: string
+          tipo_documento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documenti_firmati_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "persone"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       movimenti: {
         Row: {
           categoria: Database["public"]["Enums"]["categoria_movimento"]
