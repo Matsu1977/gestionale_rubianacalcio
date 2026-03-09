@@ -82,6 +82,69 @@ export type Database = {
         }
         Relationships: []
       }
+      comunicazioni: {
+        Row: {
+          corso_filtro: string | null
+          created_at: string
+          id: string
+          messaggio: string
+          oggetto: string
+          tipo_destinatari: string
+        }
+        Insert: {
+          corso_filtro?: string | null
+          created_at?: string
+          id?: string
+          messaggio: string
+          oggetto: string
+          tipo_destinatari?: string
+        }
+        Update: {
+          corso_filtro?: string | null
+          created_at?: string
+          id?: string
+          messaggio?: string
+          oggetto?: string
+          tipo_destinatari?: string
+        }
+        Relationships: []
+      }
+      comunicazioni_destinatari: {
+        Row: {
+          comunicazione_id: string
+          created_at: string
+          id: string
+          persona_id: string
+        }
+        Insert: {
+          comunicazione_id: string
+          created_at?: string
+          id?: string
+          persona_id: string
+        }
+        Update: {
+          comunicazione_id?: string
+          created_at?: string
+          id?: string
+          persona_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comunicazioni_destinatari_comunicazione_id_fkey"
+            columns: ["comunicazione_id"]
+            isOneToOne: false
+            referencedRelation: "comunicazioni"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comunicazioni_destinatari_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "persone"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       movimenti: {
         Row: {
           categoria: Database["public"]["Enums"]["categoria_movimento"]
