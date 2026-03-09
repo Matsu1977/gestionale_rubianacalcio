@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { format, addDays, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
 
@@ -29,6 +30,9 @@ const item = {
 };
 
 export default function Dashboard() {
+  const { role } = useAuth();
+  const isAllenatore = role === "allenatore";
+
   const { data: persone } = useQuery({
     queryKey: ["persone-count"],
     queryFn: async () => {
@@ -67,6 +71,7 @@ export default function Dashboard() {
       const { data } = await supabase.from("movimenti").select("*").order("data", { ascending: false }).limit(10);
       return data || [];
     },
+    enabled: !isAllenatore,
   });
 
   const { data: allMovimenti } = useQuery({
@@ -75,6 +80,7 @@ export default function Dashboard() {
       const { data } = await supabase.from("movimenti").select("tipo, importo");
       return data || [];
     },
+    enabled: !isAllenatore,
   });
 
   const { data: personeMap } = useQuery({
@@ -116,13 +122,13 @@ export default function Dashboard() {
       color: "text-accent",
       bgColor: "bg-accent/10",
     },
-    {
+    ...(!isAllenatore ? [{
       title: "Saldo Cassa",
       value: `€ ${saldo.toLocaleString("it-IT", { minimumFractionDigits: 2 })}`,
       icon: Wallet,
       color: "text-primary",
       bgColor: "bg-primary/10",
-    },
+    }] : []),
   ];
 
   // Alerts
@@ -216,27 +222,29 @@ export default function Dashboard() {
           </Card>
         </motion.div>
 
-        <motion.div variants={item} initial="hidden" animate="show">
-          <Card className="glass-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Ultimi Movimenti</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {recentMovements.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nessun movimento registrato</p>
-              ) : (
-                recentMovements.map((mov, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/30 transition-colors">
-                    <span className="text-sm">{mov.desc}</span>
-                    <span className={`text-sm font-semibold ${mov.type === "entrata" ? "text-success" : "text-destructive"}`}>
-                      {mov.amount}
-                    </span>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
+        {!isAllenatore && (
+          <motion.div variants={item} initial="hidden" animate="show">
+            <Card className="glass-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Ultimi Movimenti</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {recentMovements.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nessun movimento registrato</p>
+                ) : (
+                  recentMovements.map((mov, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/30 transition-colors">
+                      <span className="text-sm">{mov.desc}</span>
+                      <span className={`text-sm font-semibold ${mov.type === "entrata" ? "text-success" : "text-destructive"}`}>
+                        {mov.amount}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
       </div>
     </div>
   );
