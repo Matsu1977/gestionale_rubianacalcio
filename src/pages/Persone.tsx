@@ -61,6 +61,36 @@ export default function Persone() {
     },
   });
 
+  // Fetch abbonamenti for status indicators
+  const { data: abbonamenti = [] } = useQuery({
+    queryKey: ["abbonamenti-lista"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("abbonamenti").select("persona_id, stato_pagamento, stagione");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const abbonamentiMap = useMemo(() => {
+    const map: Record<string, { attivo: boolean }> = {};
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    // Stagione corrente: se siamo da settembre in poi è YYYY/(YYYY+1), altrimenti (YYYY-1)/YYYY
+    const startYear = currentMonth >= 8 ? currentYear : currentYear - 1;
+    const currentStagione = `${startYear}/${startYear + 1}`;
+
+    for (const a of abbonamenti) {
+      const isCurrentSeason = a.stagione === currentStagione;
+      if (isCurrentSeason) {
+        map[a.persona_id] = { attivo: true };
+      } else if (!map[a.persona_id]) {
+        map[a.persona_id] = { attivo: false };
+      }
+    }
+    return map;
+  }, [abbonamenti]);
+
   const upsertMutation = useMutation({
     mutationFn: async ({ persona, ruoli }: { persona: TablesInsert<"persone"> & { id?: string }; ruoli: TipoRuolo[] }) => {
       let personaId = persona.id;
