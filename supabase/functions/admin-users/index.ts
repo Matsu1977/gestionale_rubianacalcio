@@ -130,6 +130,33 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "link_persona") {
+      const { user_id, persona_id } = params;
+      if (!user_id || !persona_id) throw new Error("user_id e persona_id sono obbligatori");
+
+      // Remove any existing link for this user
+      await supabaseAdmin.from("persone").update({ user_id: null }).eq("user_id", user_id);
+      // Link persona to user
+      const { error } = await supabaseAdmin.from("persone").update({ user_id }).eq("id", persona_id);
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "unlink_persona") {
+      const { user_id } = params;
+      if (!user_id) throw new Error("user_id è obbligatorio");
+
+      const { error } = await supabaseAdmin.from("persone").update({ user_id: null }).eq("user_id", user_id);
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     throw new Error(`Azione non supportata: ${action}`);
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {

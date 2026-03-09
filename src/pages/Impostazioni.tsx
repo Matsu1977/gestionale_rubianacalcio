@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import {
-  Settings, Users, Shield, UserCog, Trash2, Loader2, Plus, KeyRound, Ban, CheckCircle2, UserPlus,
+  Settings, Users, Shield, UserCog, Trash2, Loader2, KeyRound, Ban, CheckCircle2, UserPlus, Link, Unlink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,18 +28,15 @@ type UserWithRole = {
   full_name: string;
   role: string | null;
   is_active: boolean;
+  persona_id: string | null;
+  persona_nome: string | null;
 };
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Amministratore",
   segreteria: "Segreteria",
   allenatore: "Allenatore",
-};
-
-const ROLE_COLORS: Record<string, string> = {
-  admin: "bg-primary/15 text-primary border-primary/30",
-  segreteria: "bg-blue-500/15 text-blue-700 border-blue-500/30",
-  allenatore: "bg-purple-500/15 text-purple-700 border-purple-500/30",
+  atleta: "Atleta",
 };
 
 async function callAdminApi(action: string, params: Record<string, any>) {
@@ -59,8 +56,10 @@ export default function Impostazioni() {
   const queryClient = useQueryClient();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState<string | null>(null);
+  const [showLinkDialog, setShowLinkDialog] = useState<UserWithRole | null>(null);
   const [newUser, setNewUser] = useState({ email: "", password: "", full_name: "", role: "allenatore" });
   const [newPassword, setNewPassword] = useState("");
+  const [selectedPersonaId, setSelectedPersonaId] = useState("");
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["admin-users"],
@@ -72,14 +71,29 @@ export default function Impostazioni() {
       if (error) throw error;
 
       const { data: roles } = await supabase.from("user_roles").select("*");
+      const { data: persone } = await supabase.from("persone").select("id, nome, cognome, user_id").not("user_id", "is", null);
 
-      return (profiles || []).map((p: any) => ({
-        id: p.id,
-        email: p.email || "",
-        full_name: p.full_name || "",
-        role: roles?.find((r: any) => r.user_id === p.id)?.role || null,
-        is_active: p.is_active ?? true,
-      })) as UserWithRole[];
+      return (profiles || []).map((p: any) => {
+        const persona = (persone || []).find((pe: any) => pe.user_id === p.id);
+        return {
+          id: p.id,
+          email: p.email || "",
+          full_name: p.full_name || "",
+          role: roles?.find((r: any) => r.user_id === p.id)?.role || null,
+          is_active: p.is_active ?? true,
+          persona_id: persona?.id || null,
+          persona_nome: persona ? `${persona.nome} ${persona.cognome}` : null,
+        };
+      }) as UserWithRole[];
+    },
+    enabled: currentRole === "admin",
+  });
+
+  const { data: persone = [] } = useQuery({
+    queryKey: ["persone-for-link"],
+    queryFn: async () => {
+      const { data } = await supabase.from("persone").select("id, nome, cognome").order("cognome");
+      return data || [];
     },
     enabled: currentRole === "admin",
   });
@@ -135,6 +149,27 @@ export default function Impostazioni() {
     onError: (err: any) => toast.error(err.message),
   });
 
+  const linkPersonaMutation = useMutation({
+    mutationFn: ({ userId, personaId }: { userId: string; personaId: string }) =>
+      callAdminApi("link_persona", { user_id: userId, persona_id: personaId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success("Persona collegata all'utente");
+      setShowLinkDialog(null);
+      setSelectedPersonaId("");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const unlinkPersonaMutation = useMutation({
+    mutationFn: (userId: string) => callAdminApi("unlink_persona", { user_id: userId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success("Collegamento rimosso");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
   if (currentRole !== "admin") {
     return (
       <div className="flex items-center justify-center h-64">
@@ -167,7 +202,7 @@ export default function Impostazioni() {
             <UserCog className="h-5 w-5" />
             Utenti registrati
           </CardTitle>
-          <CardDescription>Gestisci ruoli, password e stato degli utenti.</CardDescription>
+          <CardDescription>Gestisci ruoli, password, stato e collegamento anagrafica.</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -182,6 +217,7 @@ export default function Impostazioni() {
                     <TableHead>Email</TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead>Ruolo</TableHead>
+                    <TableHead>Anagrafica</TableHead>
                     <TableHead>Stato</TableHead>
                     <TableHead className="text-right">Azioni</TableHead>
                   </TableRow>
@@ -196,7 +232,7 @@ export default function Impostazioni() {
                           value={u.role || ""}
                           onValueChange={(val) => updateRoleMutation.mutate({ userId: u.id, role: val })}
                         >
-                          <SelectTrigger className="w-[160px]">
+                          <SelectTrigger className="w-[150px]">
                             <SelectValue placeholder="Nessun ruolo" />
                           </SelectTrigger>
                           <SelectContent>
@@ -209,8 +245,41 @@ export default function Impostazioni() {
                             <SelectItem value="allenatore">
                               <div className="flex items-center gap-2"><UserCog className="h-3.5 w-3.5" /> Allenatore</div>
                             </SelectItem>
+                            <SelectItem value="atleta">
+                              <div className="flex items-center gap-2"><UserCog className="h-3.5 w-3.5" /> Atleta</div>
+                            </SelectItem>
                           </SelectContent>
                         </Select>
+                      </TableCell>
+                      <TableCell>
+                        {u.persona_nome ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm">{u.persona_nome}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                              title="Scollega"
+                              onClick={() => unlinkPersonaMutation.mutate(u.id)}
+                            >
+                              <Unlink className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        ) : (
+                          u.role === "atleta" ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => { setShowLinkDialog(u); setSelectedPersonaId(""); }}
+                            >
+                              <Link className="mr-1 h-3 w-3" />
+                              Collega
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className={u.is_active ? "border-green-500/30 text-green-700 bg-green-500/10" : "border-destructive/30 text-destructive bg-destructive/10"}>
@@ -295,6 +364,7 @@ export default function Impostazioni() {
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="segreteria">Segreteria</SelectItem>
                   <SelectItem value="allenatore">Allenatore</SelectItem>
+                  <SelectItem value="atleta">Atleta</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -328,6 +398,43 @@ export default function Impostazioni() {
             >
               {updatePasswordMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Aggiorna
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Link Persona Dialog */}
+      <Dialog open={!!showLinkDialog} onOpenChange={() => { setShowLinkDialog(null); setSelectedPersonaId(""); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Collega anagrafica</DialogTitle>
+            <DialogDescription>
+              Seleziona la persona di <strong>{showLinkDialog?.full_name || showLinkDialog?.email}</strong> nell'anagrafica del gestionale.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Persona</Label>
+            <Select value={selectedPersonaId} onValueChange={setSelectedPersonaId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleziona persona..." />
+              </SelectTrigger>
+              <SelectContent>
+                {persone.map((p: any) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.cognome} {p.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowLinkDialog(null); setSelectedPersonaId(""); }}>Annulla</Button>
+            <Button
+              onClick={() => showLinkDialog && linkPersonaMutation.mutate({ userId: showLinkDialog.id, personaId: selectedPersonaId })}
+              disabled={linkPersonaMutation.isPending || !selectedPersonaId}
+            >
+              {linkPersonaMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Collega
             </Button>
           </DialogFooter>
         </DialogContent>
