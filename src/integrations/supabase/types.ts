@@ -284,18 +284,21 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          is_active: boolean
         }
         Insert: {
           created_at?: string
           email?: string | null
           full_name?: string | null
           id: string
+          is_active?: boolean
         }
         Update: {
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
+          is_active?: boolean
         }
         Relationships: []
       }
@@ -455,7 +458,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "allenatore"
+      app_role: "admin" | "allenatore" | "segreteria"
       categoria_movimento:
         | "Quota socio"
         | "Abbonamento"
@@ -597,7 +600,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "allenatore"],
+      app_role: ["admin", "allenatore", "segreteria"],
       categoria_movimento: [
         "Quota socio",
         "Abbonamento",

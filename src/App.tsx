@@ -18,6 +18,7 @@ import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
@@ -39,13 +40,15 @@ function ProtectedRoutes() {
         <div className="space-y-2">
           <h2 className="text-xl font-semibold">Accesso in attesa</h2>
           <p className="text-muted-foreground">Il tuo account non ha ancora un ruolo assegnato. Contatta l'amministratore.</p>
-          <button onClick={() => { import("@/integrations/supabase/client").then(m => m.supabase.auth.signOut()); }} className="text-primary underline text-sm">Esci</button>
+          <button onClick={() => supabase.auth.signOut()} className="text-primary underline text-sm">Esci</button>
         </div>
       </div>
     );
   }
 
   const isAdmin = role === "admin";
+  const isSegreteria = role === "segreteria";
+  const hasFullAccess = isAdmin || isSegreteria;
 
   return (
     <AppLayout>
@@ -53,11 +56,11 @@ function ProtectedRoutes() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/comunicazioni" element={<Comunicazioni />} />
         <Route path="/abbonamenti" element={<Abbonamenti />} />
-        {isAdmin && <Route path="/persone" element={<Persone />} />}
-        {isAdmin && <Route path="/tesseramenti" element={<Tesseramenti />} />}
-        {isAdmin && <Route path="/soci" element={<Soci />} />}
-        {isAdmin && <Route path="/contabilita" element={<Contabilita />} />}
-        {isAdmin && <Route path="/report" element={<Report />} />}
+        {hasFullAccess && <Route path="/persone" element={<Persone />} />}
+        {hasFullAccess && <Route path="/tesseramenti" element={<Tesseramenti />} />}
+        {hasFullAccess && <Route path="/soci" element={<Soci />} />}
+        {hasFullAccess && <Route path="/contabilita" element={<Contabilita />} />}
+        {hasFullAccess && <Route path="/report" element={<Report />} />}
         {isAdmin && <Route path="/impostazioni" element={<Impostazioni />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

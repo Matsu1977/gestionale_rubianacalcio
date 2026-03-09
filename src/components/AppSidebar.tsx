@@ -31,16 +31,22 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 const allMenuItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard, roles: ["admin", "allenatore"] },
-  { title: "Persone", url: "/persone", icon: Users, roles: ["admin"] },
-  { title: "Tesseramenti", url: "/tesseramenti", icon: IdCard, roles: ["admin"] },
-  { title: "Abbonamenti", url: "/abbonamenti", icon: CalendarCheck, roles: ["admin", "allenatore"] },
-  { title: "Soci", url: "/soci", icon: Heart, roles: ["admin"] },
-  { title: "Contabilità", url: "/contabilita", icon: Wallet, roles: ["admin"] },
-  { title: "Comunicazioni", url: "/comunicazioni", icon: MessageSquare, roles: ["admin", "allenatore"] },
-  { title: "Report", url: "/report", icon: BarChart3, roles: ["admin"] },
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, roles: ["admin", "segreteria", "allenatore"] },
+  { title: "Persone", url: "/persone", icon: Users, roles: ["admin", "segreteria"] },
+  { title: "Tesseramenti", url: "/tesseramenti", icon: IdCard, roles: ["admin", "segreteria"] },
+  { title: "Abbonamenti", url: "/abbonamenti", icon: CalendarCheck, roles: ["admin", "segreteria", "allenatore"] },
+  { title: "Soci", url: "/soci", icon: Heart, roles: ["admin", "segreteria"] },
+  { title: "Contabilità", url: "/contabilita", icon: Wallet, roles: ["admin", "segreteria"] },
+  { title: "Comunicazioni", url: "/comunicazioni", icon: MessageSquare, roles: ["admin", "segreteria", "allenatore"] },
+  { title: "Report", url: "/report", icon: BarChart3, roles: ["admin", "segreteria"] },
   { title: "Impostazioni", url: "/impostazioni", icon: Settings, roles: ["admin"] },
 ];
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Amministratore",
+  segreteria: "Segreteria",
+  allenatore: "Allenatore",
+};
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -101,7 +107,7 @@ export function AppSidebar() {
         {!collapsed && role && (
           <div className="flex items-center justify-center">
             <Badge variant="outline" className="text-[10px] border-sidebar-border text-sidebar-foreground/60">
-              {role === "admin" ? "Amministratore" : "Allenatore"}
+              {ROLE_LABELS[role] || role}
             </Badge>
           </div>
         )}
