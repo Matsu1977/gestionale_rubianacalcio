@@ -249,6 +249,7 @@ export type Database = {
           nome: string
           note: string | null
           telefono: string | null
+          user_id: string | null
         }
         Insert: {
           certificato_medico_scadenza?: string | null
@@ -262,6 +263,7 @@ export type Database = {
           nome: string
           note?: string | null
           telefono?: string | null
+          user_id?: string | null
         }
         Update: {
           certificato_medico_scadenza?: string | null
@@ -275,6 +277,7 @@ export type Database = {
           nome?: string
           note?: string | null
           telefono?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -521,7 +524,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "allenatore" | "segreteria"
+      app_role: "admin" | "allenatore" | "segreteria" | "atleta"
       categoria_movimento:
         | "Quota socio"
         | "Abbonamento"
@@ -663,7 +666,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "allenatore", "segreteria"],
+      app_role: ["admin", "allenatore", "segreteria", "atleta"],
       categoria_movimento: [
         "Quota socio",
         "Abbonamento",
