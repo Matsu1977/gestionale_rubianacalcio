@@ -13,6 +13,7 @@ import Soci from "./pages/Soci";
 import Contabilita from "./pages/Contabilita";
 import Comunicazioni from "./pages/Comunicazioni";
 import Report from "./pages/Report";
+import Presenze from "./pages/Presenze";
 import Impostazioni from "./pages/Impostazioni";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
