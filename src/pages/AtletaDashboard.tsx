@@ -1,0 +1,387 @@
+import { motion } from "framer-motion";
+import { User, CalendarCheck, Wallet, FileCheck, MessageSquare, ClipboardCheck } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { format, parseISO, isBefore } from "date-fns";
+import { it } from "date-fns/locale";
+
+const container = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+};
+const item = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } },
+};
+
+export default function AtletaDashboard() {
+  const { user } = useAuth();
+
+  // Get persona linked to this user
+  const { data: persona } = useQuery({
+    queryKey: ["atleta-persona", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("persone")
+        .select("*")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Get abbonamenti for this persona
+  const { data: abbonamenti } = useQuery({
+    queryKey: ["atleta-abbonamenti", persona?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("abbonamenti")
+        .select("*")
+        .eq("persona_id", persona!.id)
+        .order("created_at", { ascending: false });
+      return data || [];
+    },
+    enabled: !!persona,
+  });
+
+  // Get rate for abbonamenti
+  const { data: rate } = useQuery({
+    queryKey: ["atleta-rate", persona?.id],
+    queryFn: async () => {
+      const abbIds = (abbonamenti || []).map((a) => a.id);
+      if (abbIds.length === 0) return [];
+      const { data } = await supabase
+        .from("rate")
+        .select("*")
+        .in("abbonamento_id", abbIds)
+        .order("data_scadenza", { ascending: true });
+      return data || [];
+    },
+    enabled: !!abbonamenti && abbonamenti.length > 0,
+  });
+
+  // Get movimenti (pagamenti) for this persona
+  const { data: movimenti } = useQuery({
+    queryKey: ["atleta-movimenti", persona?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("movimenti")
+        .select("*")
+        .eq("persona_id", persona!.id)
+        .order("data", { ascending: false })
+        .limit(20);
+      return data || [];
+    },
+    enabled: !!persona,
+  });
+
+  // Get comunicazioni sent to this persona or their corso
+  const { data: comunicazioni } = useQuery({
+    queryKey: ["atleta-comunicazioni", persona?.id],
+    queryFn: async () => {
+      // Get comunicazioni where persona is a destinatario
+      const { data: destData } = await supabase
+        .from("comunicazioni_destinatari")
+        .select("comunicazione_id")
+        .eq("persona_id", persona!.id);
+
+      const commIds = (destData || []).map((d) => d.comunicazione_id);
+
+      // Also get comunicazioni sent to "tutti" or to their corsi
+      const corsi = (abbonamenti || []).map((a) => a.corso);
+      
+      const { data } = await supabase
+        .from("comunicazioni")
+        .select("*")
+        .or(
+          [
+            commIds.length > 0 ? `id.in.(${commIds.join(",")})` : null,
+            `tipo_destinatari.eq.tutti`,
+            ...corsi.map((c) => `corso_filtro.eq.${c}`),
+          ]
+            .filter(Boolean)
+            .join(",")
+        )
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      return data || [];
+    },
+    enabled: !!persona && !!abbonamenti,
+  });
+
+  // Presenze stats
+  const { data: presenzeStats } = useQuery({
+    queryKey: ["atleta-presenze", persona?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("presenze")
+        .select("presente, sessione_id")
+        .eq("persona_id", persona!.id);
+      const totale = (data || []).length;
+      const presenti = (data || []).filter((p) => p.presente).length;
+      return { totale, presenti, percentuale: totale > 0 ? Math.round((presenti / totale) * 100) : 0 };
+    },
+    enabled: !!persona,
+  });
+
+  const today = new Date();
+  const certScaduto = persona?.certificato_medico_scadenza
+    ? isBefore(parseISO(persona.certificato_medico_scadenza), today)
+    : false;
+
+  if (!persona) {
+    return (
+      <div className="space-y-8">
+        <h1 className="text-3xl font-bold tracking-tight">La mia Area</h1>
+        <Card className="glass-card">
+          <CardContent className="p-6">
+            <p className="text-muted-foreground">
+              Il tuo account non è ancora collegato a un profilo atleta. Contatta la segreteria.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const abbAttivo = (abbonamenti || []).find((a) => a.stato_pagamento !== "Scaduto");
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">La mia Area</h1>
+        <p className="text-muted-foreground mt-1">
+          Benvenuto, {persona.nome} {persona.cognome}
+        </p>
+      </div>
+
+      <motion.div
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        variants={container}
+        initial="hidden"
+        animate="show"
+      >
+        {/* Info Personali */}
+        <motion.div variants={item} className="lg:col-span-1">
+          <Card className="glass-card h-full">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                Informazioni Personali
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Nome</span>
+                <span className="font-medium">{persona.nome} {persona.cognome}</span>
+              </div>
+              {persona.data_nascita && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Data di nascita</span>
+                  <span>{format(parseISO(persona.data_nascita), "dd/MM/yyyy")}</span>
+                </div>
+              )}
+              {persona.codice_fiscale && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Codice Fiscale</span>
+                  <span className="font-mono text-xs">{persona.codice_fiscale}</span>
+                </div>
+              )}
+              {persona.email && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Email</span>
+                  <span>{persona.email}</span>
+                </div>
+              )}
+              {persona.telefono && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Telefono</span>
+                  <span>{persona.telefono}</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Certificato Medico */}
+        <motion.div variants={item}>
+          <Card className="glass-card h-full">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileCheck className="h-5 w-5 text-primary" />
+                Certificato Medico
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {persona.certificato_medico_scadenza ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Scadenza</span>
+                    <span className="text-sm font-medium">
+                      {format(parseISO(persona.certificato_medico_scadenza), "dd/MM/yyyy")}
+                    </span>
+                  </div>
+                  <Badge variant={certScaduto ? "destructive" : "default"}>
+                    {certScaduto ? "Scaduto" : "Valido"}
+                  </Badge>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Nessun certificato registrato</p>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Presenze */}
+        <motion.div variants={item}>
+          <Card className="glass-card h-full">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5 text-primary" />
+                Presenze
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {presenzeStats ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Frequenza</span>
+                    <span className="text-2xl font-bold">{presenzeStats.percentuale}%</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {presenzeStats.presenti} presenze su {presenzeStats.totale} sessioni
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Nessuna presenza registrata</p>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Abbonamento e Rate */}
+        <motion.div variants={item} initial="hidden" animate="show">
+          <Card className="glass-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CalendarCheck className="h-5 w-5 text-primary" />
+                Abbonamento
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {abbAttivo ? (
+                <>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Corso</span>
+                      <span className="font-medium">{abbAttivo.corso}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Stagione</span>
+                      <span>{abbAttivo.stagione}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Importo</span>
+                      <span>€ {Number(abbAttivo.importo_totale).toLocaleString("it-IT", { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Stato</span>
+                      <Badge variant={abbAttivo.stato_pagamento === "Pagato" ? "default" : "secondary"}>
+                        {abbAttivo.stato_pagamento}
+                      </Badge>
+                    </div>
+                  </div>
+                  {rate && rate.filter((r) => r.abbonamento_id === abbAttivo.id).length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Piano Rate</p>
+                      {rate
+                        .filter((r) => r.abbonamento_id === abbAttivo.id)
+                        .map((r) => (
+                          <div key={r.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 text-sm">
+                            <span>Rata {r.numero_rata} - {format(parseISO(r.data_scadenza), "dd/MM/yyyy")}</span>
+                            <Badge variant={r.stato === "Pagata" ? "default" : "secondary"} className="text-xs">
+                              {r.stato}
+                            </Badge>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Nessun abbonamento attivo</p>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Pagamenti */}
+        <motion.div variants={item} initial="hidden" animate="show">
+          <Card className="glass-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Wallet className="h-5 w-5 text-primary" />
+                Pagamenti Effettuati
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {(movimenti || []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nessun pagamento registrato</p>
+              ) : (
+                movimenti!.map((m) => (
+                  <div key={m.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/30 transition-colors">
+                    <div>
+                      <span className="text-sm">{m.categoria}</span>
+                      {m.note && <p className="text-xs text-muted-foreground">{m.note}</p>}
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-semibold">
+                        € {Number(m.importo).toLocaleString("it-IT", { minimumFractionDigits: 2 })}
+                      </span>
+                      <p className="text-xs text-muted-foreground">{format(parseISO(m.data), "dd/MM/yyyy")}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Comunicazioni */}
+      <motion.div variants={item} initial="hidden" animate="show">
+        <Card className="glass-card">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              Comunicazioni
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {(comunicazioni || []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nessuna comunicazione</p>
+            ) : (
+              comunicazioni!.map((c) => (
+                <div key={c.id} className="p-4 rounded-lg bg-muted/50 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm">{c.oggetto}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {format(parseISO(c.created_at), "dd/MM/yyyy", { locale: it })}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">{c.messaggio}</p>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
+  );
+}

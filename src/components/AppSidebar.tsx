@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 
 const allMenuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, roles: ["admin", "segreteria", "allenatore"] },
+  { title: "La mia Area", url: "/", icon: LayoutDashboard, roles: ["atleta"] },
   { title: "Persone", url: "/persone", icon: Users, roles: ["admin", "segreteria"] },
   { title: "Tesseramenti", url: "/tesseramenti", icon: IdCard, roles: ["admin", "segreteria"] },
   { title: "Abbonamenti", url: "/abbonamenti", icon: CalendarCheck, roles: ["admin", "segreteria", "allenatore"] },
@@ -48,6 +49,7 @@ const ROLE_LABELS: Record<string, string> = {
   admin: "Amministratore",
   segreteria: "Segreteria",
   allenatore: "Allenatore",
+  atleta: "Atleta",
 };
 
 export function AppSidebar() {

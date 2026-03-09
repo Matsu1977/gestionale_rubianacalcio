@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import AppLayout from "@/components/AppLayout";
 import Dashboard from "./pages/Dashboard";
+import AtletaDashboard from "./pages/AtletaDashboard";
 import Persone from "./pages/Persone";
 import Tesseramenti from "./pages/Tesseramenti";
 import Abbonamenti from "./pages/Abbonamenti";
@@ -49,7 +50,19 @@ function ProtectedRoutes() {
 
   const isAdmin = role === "admin";
   const isSegreteria = role === "segreteria";
+  const isAtleta = role === "atleta";
   const hasFullAccess = isAdmin || isSegreteria;
+
+  if (isAtleta) {
+    return (
+      <AppLayout>
+        <Routes>
+          <Route path="/" element={<AtletaDashboard />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
