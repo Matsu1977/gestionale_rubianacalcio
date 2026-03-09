@@ -49,6 +49,7 @@ interface Props {
 export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
   const queryClient = useQueryClient();
   const [pagamentoOpen, setPagamentoOpen] = useState(false);
+  const [firmaOpen, setFirmaOpen] = useState(false);
 
   const { data: movimenti = [] } = useQuery({
     queryKey: ["movimenti", persona?.id],
