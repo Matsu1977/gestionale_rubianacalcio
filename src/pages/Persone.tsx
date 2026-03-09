@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import type { Database } from "@/integrations/supabase/types";
 import { motion } from "framer-motion";
-import { Plus, Pencil, Trash2, Search, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Users, ShieldCheck, ShieldX, CheckCircle2, XCircle, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
