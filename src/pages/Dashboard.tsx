@@ -30,6 +30,9 @@ const item = {
 };
 
 export default function Dashboard() {
+  const { role } = useAuth();
+  const isAllenatore = role === "allenatore";
+
   const { data: persone } = useQuery({
     queryKey: ["persone-count"],
     queryFn: async () => {
