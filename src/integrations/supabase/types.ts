@@ -145,6 +145,30 @@ export type Database = {
           },
         ]
       }
+      corsi: {
+        Row: {
+          attivo: boolean
+          created_at: string
+          descrizione: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          attivo?: boolean
+          created_at?: string
+          descrizione?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          attivo?: boolean
+          created_at?: string
+          descrizione?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       documenti_firmati: {
         Row: {
           created_at: string
@@ -448,6 +472,7 @@ export type Database = {
           data_inizio: string
           id: string
           importo: number
+          metodo_pagamento: string | null
           persona_id: string
           stagione: string
           stato: string
@@ -459,6 +484,7 @@ export type Database = {
           data_inizio?: string
           id?: string
           importo?: number
+          metodo_pagamento?: string | null
           persona_id: string
           stagione: string
           stato?: string
@@ -470,6 +496,7 @@ export type Database = {
           data_inizio?: string
           id?: string
           importo?: number
+          metodo_pagamento?: string | null
           persona_id?: string
           stagione?: string
           stato?: string
