@@ -1,19 +1,32 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables, Database } from "@/integrations/supabase/types";
 import { motion } from "framer-motion";
-import { Heart, Search, CheckCircle, XCircle } from "lucide-react";
+import { Heart, Search, CheckCircle, XCircle, Plus } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 type Persona = Tables<"persone">;
+type MetodoPag = Database["public"]["Enums"]["metodo_pagamento"];
+
+const METODI: MetodoPag[] = ["Contanti", "Bonifico", "Carta", "Satispay", "Altro"];
 
 export default function Soci() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [quotaDialog, setQuotaDialog] = useState<Persona | null>(null);
+  const [importo, setImporto] = useState("50");
+  const [metodo, setMetodo] = useState<MetodoPag>("Contanti");
 
-  // Get all persona IDs with role "Socio"
   const { data: sociIds = [] } = useQuery({
     queryKey: ["ruoli-socio"],
     queryFn: async () => {
@@ -32,7 +45,6 @@ export default function Soci() {
     },
   });
 
-  // Fetch quota socio payments for current year
   const { data: quotePagate = {} } = useQuery({
     queryKey: ["quote-socio"],
     queryFn: async () => {
@@ -52,6 +64,28 @@ export default function Soci() {
       }
       return map;
     },
+  });
+
+  const pagaQuotaMutation = useMutation({
+    mutationFn: async ({ persona, importo, metodo }: { persona: Persona; importo: number; metodo: MetodoPag }) => {
+      const { error } = await supabase.from("movimenti").insert({
+        tipo: "Entrata",
+        categoria: "Quota socio",
+        importo,
+        metodo_pagamento: metodo,
+        persona_id: persona.id,
+        riferimento: `Quota associativa ${new Date().getFullYear()}`,
+        note: `Quota socio annuale ${new Date().getFullYear()} - ${persona.cognome} ${persona.nome}`,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["quote-socio"] });
+      queryClient.invalidateQueries({ queryKey: ["movimenti-all"] });
+      toast.success("Quota associativa registrata");
+      setQuotaDialog(null);
+    },
+    onError: (e) => toast.error("Errore: " + e.message),
   });
 
   const soci = persone.filter((p) => sociIds.includes(p.id));
@@ -101,6 +135,7 @@ export default function Soci() {
                 <TableHead className="hidden md:table-cell">Email</TableHead>
                 <TableHead className="text-center">Quota {new Date().getFullYear()}</TableHead>
                 <TableHead className="text-right">Importo</TableHead>
+                <TableHead className="w-[100px]">Azioni</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -126,6 +161,18 @@ export default function Soci() {
                     <TableCell className="text-right font-medium">
                       {pagato > 0 ? `€${pagato.toFixed(2)}` : "—"}
                     </TableCell>
+                    <TableCell>
+                      {pagato === 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          onClick={() => { setQuotaDialog(p); setImporto("50"); setMetodo("Contanti"); }}
+                        >
+                          <Plus className="h-3 w-3 mr-1" /> Quota
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -133,6 +180,52 @@ export default function Soci() {
           </Table>
         )}
       </div>
+
+      {/* Quota Dialog */}
+      <Dialog open={!!quotaDialog} onOpenChange={(open) => { if (!open) setQuotaDialog(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Registra Quota Associativa</DialogTitle>
+            <DialogDescription>
+              Registra il pagamento della quota annuale per {quotaDialog?.cognome} {quotaDialog?.nome}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Importo (€)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={importo}
+                onChange={(e) => setImporto(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Metodo di Pagamento</Label>
+              <Select value={metodo} onValueChange={(v) => setMetodo(v as MetodoPag)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {METODI.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setQuotaDialog(null)}>Annulla</Button>
+            <Button
+              disabled={pagaQuotaMutation.isPending || !importo || Number(importo) <= 0}
+              onClick={() => {
+                if (quotaDialog) {
+                  pagaQuotaMutation.mutate({ persona: quotaDialog, importo: Number(importo), metodo });
+                }
+              }}
+            >
+              {pagaQuotaMutation.isPending ? "Salvataggio..." : "Registra Pagamento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }

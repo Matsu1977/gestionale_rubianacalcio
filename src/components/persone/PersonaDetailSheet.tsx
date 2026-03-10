@@ -9,16 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Receipt, Trash2, FileSignature } from "lucide-react";
+import { Trash2, Receipt, FileSignature } from "lucide-react";
 import { toast } from "sonner";
-import PagamentoDialog from "./PagamentoDialog";
 import DocumentoFirmaDialog from "./DocumentoFirmaDialog";
 import DocumentiList from "./DocumentiList";
 
 type Persona = Tables<"persone">;
 type TipoRuolo = Database["public"]["Enums"]["tipo_ruolo"];
-type CategoriaMov = Database["public"]["Enums"]["categoria_movimento"];
-type MetodoPag = Database["public"]["Enums"]["metodo_pagamento"];
 
 const RUOLO_COLORS: Record<TipoRuolo, string> = {
   Dirigente: "bg-primary/15 text-primary border-primary/30",
@@ -48,7 +45,6 @@ interface Props {
 
 export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
   const queryClient = useQueryClient();
-  const [pagamentoOpen, setPagamentoOpen] = useState(false);
   const [firmaOpen, setFirmaOpen] = useState(false);
 
   const { data: movimenti = [] } = useQuery({
@@ -71,7 +67,7 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("abbonamenti")
-        .select("*, rate(*)")
+        .select("*")
         .eq("persona_id", persona!.id)
         .order("data_inizio", { ascending: false });
       if (error) throw error;
@@ -129,7 +125,7 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
         tipo: "Tesseramento",
         categoria: `${t.tipo_tesseramento} – ${t.stagione}`,
         importo: Number(t.importo),
-        metodo: "—",
+        metodo: (t as any).metodo_pagamento || "—",
         stato: t.stato,
         source: "tesseramento",
       });
@@ -138,23 +134,6 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
     rows.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
     return rows;
   }, [movimenti, abbonamenti, tesseramenti]);
-
-  const addMutation = useMutation({
-    mutationFn: async (payload: { data: string; categoria: CategoriaMov; importo: number; metodo_pagamento: MetodoPag; note: string | null }) => {
-      const { error } = await supabase.from("movimenti").insert({
-        ...payload,
-        tipo: "Entrata" as const,
-        persona_id: persona!.id,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["movimenti", persona?.id] });
-      toast.success("Pagamento registrato");
-      setPagamentoOpen(false);
-    },
-    onError: (e) => toast.error("Errore: " + e.message),
-  });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -258,16 +237,11 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
             <Separator />
 
             {/* Storico Pagamenti */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold">Storico Pagamenti</h3>
-                <p className="text-sm text-muted-foreground">
-                  {allHistory.length} moviment{allHistory.length === 1 ? "o" : "i"} · Totale movimenti: €{totaleMovimenti.toFixed(2)}
-                </p>
-              </div>
-              <Button size="sm" onClick={() => setPagamentoOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" /> Movimento generico
-              </Button>
+            <div>
+              <h3 className="font-semibold">Storico Pagamenti</h3>
+              <p className="text-sm text-muted-foreground">
+                {allHistory.length} moviment{allHistory.length === 1 ? "o" : "i"} · Totale movimenti: €{totaleMovimenti.toFixed(2)}
+              </p>
             </div>
 
             {allHistory.length === 0 ? (
@@ -315,14 +289,6 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
           </div>
         </SheetContent>
       </Sheet>
-
-      <PagamentoDialog
-        open={pagamentoOpen}
-        onOpenChange={setPagamentoOpen}
-        personaNome={`${persona.nome} ${persona.cognome}`}
-        onSave={(data) => addMutation.mutate(data)}
-        isSaving={addMutation.isPending}
-      />
 
       <DocumentoFirmaDialog
         open={firmaOpen}

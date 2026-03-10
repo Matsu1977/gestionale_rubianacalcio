@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import {
-  Settings, Users, Shield, UserCog, Trash2, Loader2, KeyRound, Ban, CheckCircle2, UserPlus, Link, Unlink, CreditCard,
+  Settings, Users, Shield, UserCog, Trash2, Loader2, KeyRound, Ban, CheckCircle2, UserPlus, Link, Unlink, CreditCard, BookOpen,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PaymentSettingsCard from "@/components/impostazioni/PaymentSettingsCard";
+import CorsiSettingsCard from "@/components/impostazioni/CorsiSettingsCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -189,7 +190,7 @@ export default function Impostazioni() {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Impostazioni</h1>
-            <p className="text-sm text-muted-foreground">Gestione utenti e ruoli</p>
+            <p className="text-sm text-muted-foreground">Gestione utenti, corsi e pagamenti</p>
           </div>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
@@ -203,6 +204,10 @@ export default function Impostazioni() {
           <TabsTrigger value="utenti" className="gap-2">
             <UserCog className="h-4 w-4" />
             Utenti
+          </TabsTrigger>
+          <TabsTrigger value="corsi" className="gap-2">
+            <BookOpen className="h-4 w-4" />
+            Corsi
           </TabsTrigger>
           <TabsTrigger value="pagamenti" className="gap-2">
             <CreditCard className="h-4 w-4" />
@@ -350,6 +355,10 @@ export default function Impostazioni() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="corsi">
+          <CorsiSettingsCard />
         </TabsContent>
 
         <TabsContent value="pagamenti">
