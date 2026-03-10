@@ -15,6 +15,7 @@ type Tesseramento = Tables<"tesseramenti">;
 
 const STATI = ["Attivo", "Scaduto", "Sospeso"];
 const TIPI = ["Standard", "Agonistico", "Non agonistico", "Promozionale"];
+const METODI = ["Contanti", "Bonifico", "Carta", "Satispay", "Altro"];
 
 const schema = z.object({
   persona_id: z.string().min(1, "Seleziona una persona"),
@@ -24,6 +25,7 @@ const schema = z.object({
   data_inizio: z.string().min(1, "Data inizio obbligatoria"),
   data_fine: z.string().optional().or(z.literal("")),
   importo: z.string().min(1, "Importo obbligatorio").refine((v) => !isNaN(Number(v)) && Number(v) >= 0, "Importo non valido"),
+  metodo_pagamento: z.string().min(1, "Metodo di pagamento obbligatorio"),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -33,7 +35,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   tesseramento: Tesseramento | null;
   personeMap: Record<string, string>;
-  onSave: (data: TablesInsert<"tesseramenti"> & { id?: string }) => void;
+  onSave: (data: TablesInsert<"tesseramenti"> & { id?: string; metodo_pagamento?: string }) => void;
   isSaving: boolean;
 }
 
@@ -48,6 +50,7 @@ export default function TesseramentoDialog({ open, onOpenChange, tesseramento, p
       data_inizio: new Date().toISOString().split("T")[0],
       data_fine: "",
       importo: "0",
+      metodo_pagamento: "Contanti",
     },
   });
 
@@ -62,6 +65,7 @@ export default function TesseramentoDialog({ open, onOpenChange, tesseramento, p
           data_inizio: tesseramento.data_inizio,
           data_fine: tesseramento.data_fine || "",
           importo: String(tesseramento.importo),
+          metodo_pagamento: (tesseramento as any).metodo_pagamento || "Contanti",
         });
       } else {
         form.reset({
@@ -72,6 +76,7 @@ export default function TesseramentoDialog({ open, onOpenChange, tesseramento, p
           data_inizio: new Date().toISOString().split("T")[0],
           data_fine: "",
           importo: "0",
+          metodo_pagamento: "Contanti",
         });
       }
     }
@@ -87,7 +92,8 @@ export default function TesseramentoDialog({ open, onOpenChange, tesseramento, p
       data_inizio: values.data_inizio,
       data_fine: values.data_fine || null,
       importo: Number(values.importo),
-    });
+      metodo_pagamento: values.metodo_pagamento,
+    } as any);
   };
 
   const personeList = Object.entries(personeMap).sort((a, b) => a[1].localeCompare(b[1]));
@@ -134,18 +140,32 @@ export default function TesseramentoDialog({ open, onOpenChange, tesseramento, p
                 </FormItem>
               )} />
             </div>
-            <FormField control={form.control} name="stato" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Stato *</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    {STATI.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )} />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField control={form.control} name="stato" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Stato *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      {STATI.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="metodo_pagamento" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Metodo Pagamento *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      {METODI.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="data_inizio" render={({ field }) => (
                 <FormItem>

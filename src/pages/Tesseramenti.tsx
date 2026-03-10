@@ -51,12 +51,13 @@ export default function Tesseramenti() {
   });
 
   const upsertMutation = useMutation({
-    mutationFn: async (tess: TablesInsert<"tesseramenti"> & { id?: string }) => {
+    mutationFn: async (tess: TablesInsert<"tesseramenti"> & { id?: string; metodo_pagamento?: string }) => {
+      const payload = { ...tess } as any;
       if (tess.id) {
-        const { error } = await supabase.from("tesseramenti").update(tess).eq("id", tess.id);
+        const { error } = await supabase.from("tesseramenti").update(payload).eq("id", tess.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("tesseramenti").insert(tess);
+        const { error } = await supabase.from("tesseramenti").insert(payload);
         if (error) throw error;
       }
     },
@@ -133,6 +134,7 @@ export default function Tesseramenti() {
                 <TableHead>Stagione</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Stato</TableHead>
+                <TableHead className="hidden md:table-cell">Metodo</TableHead>
                 <TableHead className="hidden md:table-cell">Inizio</TableHead>
                 <TableHead className="hidden md:table-cell">Fine</TableHead>
                 <TableHead className="text-right">Importo</TableHead>
@@ -148,6 +150,7 @@ export default function Tesseramenti() {
                   <TableCell>
                     <Badge variant="outline" className={STATO_COLORS[t.stato] || ""}>{t.stato}</Badge>
                   </TableCell>
+                  <TableCell className="hidden md:table-cell">{(t as any).metodo_pagamento || "—"}</TableCell>
                   <TableCell className="hidden md:table-cell">{new Date(t.data_inizio).toLocaleDateString("it-IT")}</TableCell>
                   <TableCell className="hidden md:table-cell">{t.data_fine ? new Date(t.data_fine).toLocaleDateString("it-IT") : "—"}</TableCell>
                   <TableCell className="text-right font-medium">€{Number(t.importo).toFixed(2)}</TableCell>
@@ -173,7 +176,7 @@ export default function Tesseramenti() {
         onOpenChange={setDialogOpen}
         tesseramento={editing}
         personeMap={personeMap}
-        onSave={(data) => upsertMutation.mutate(data)}
+        onSave={(data) => upsertMutation.mutate(data as any)}
         isSaving={upsertMutation.isPending}
       />
 
