@@ -134,6 +134,9 @@ export default function Contabilita() {
           <Button variant="outline" onClick={() => setCategorieOpen(true)}>
             <Settings className="h-4 w-4 mr-2" /> Categorie
           </Button>
+          <Button variant="outline" onClick={() => setEntrataOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" /> Nuova Entrata
+          </Button>
           <Button onClick={() => setUscitaOpen(true)}>
             <Plus className="h-4 w-4 mr-2" /> Nuova Uscita
           </Button>
