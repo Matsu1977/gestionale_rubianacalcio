@@ -192,7 +192,7 @@ export default function CategorieSpesaDialog({ open, onOpenChange }: Props) {
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAdd()}
               />
-              <Button size="sm" onClick={handleAdd} disabled={!newName.trim() || addMutation.isPending}>
+              <Button type="button" size="sm" onClick={handleAdd} disabled={!newName.trim() || addMutation.isPending}>
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -206,7 +206,7 @@ export default function CategorieSpesaDialog({ open, onOpenChange }: Props) {
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAdd()}
               />
-              <Button size="sm" onClick={handleAdd} disabled={!newName.trim() || addMutation.isPending}>
+              <Button type="button" size="sm" onClick={handleAdd} disabled={!newName.trim() || addMutation.isPending}>
                 <Plus className="h-4 w-4" />
               </Button>
             </div>

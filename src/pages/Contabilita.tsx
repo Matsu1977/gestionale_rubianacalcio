@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import UscitaDialog from "@/components/contabilita/UscitaDialog";
+import EntrataDialog from "@/components/contabilita/EntrataDialog";
 import CategorieSpesaDialog from "@/components/contabilita/CategorieSpesaDialog";
 
 type Movimento = Tables<"movimenti">;
@@ -19,6 +20,7 @@ type MetodoPag = Database["public"]["Enums"]["metodo_pagamento"];
 export default function Contabilita() {
   const queryClient = useQueryClient();
   const [uscitaOpen, setUscitaOpen] = useState(false);
+  const [entrataOpen, setEntrataOpen] = useState(false);
   const [categorieOpen, setCategorieOpen] = useState(false);
 
   const { data: movimenti = [], isLoading } = useQuery({
@@ -72,6 +74,34 @@ export default function Contabilita() {
     onError: (e) => toast.error("Errore: " + e.message),
   });
 
+  const addEntrataMutation = useMutation({
+    mutationFn: async (payload: {
+      data: string;
+      importo: number;
+      categoria_entrata: string;
+      descrizione: string;
+      metodo_pagamento: MetodoPag;
+      persona: string | null;
+    }) => {
+      const { error } = await supabase.from("movimenti").insert({
+        data: payload.data,
+        importo: payload.importo,
+        tipo: "Entrata",
+        categoria: "Altro",
+        metodo_pagamento: payload.metodo_pagamento,
+        riferimento: payload.persona || undefined,
+        note: `[${payload.categoria_entrata}] ${payload.descrizione}`,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["movimenti-all"] });
+      toast.success("Entrata registrata");
+      setEntrataOpen(false);
+    },
+    onError: (e) => toast.error("Errore: " + e.message),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("movimenti").delete().eq("id", id);
@@ -103,6 +133,9 @@ export default function Contabilita() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setCategorieOpen(true)}>
             <Settings className="h-4 w-4 mr-2" /> Categorie
+          </Button>
+          <Button variant="outline" onClick={() => setEntrataOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" /> Nuova Entrata
           </Button>
           <Button onClick={() => setUscitaOpen(true)}>
             <Plus className="h-4 w-4 mr-2" /> Nuova Uscita
@@ -206,6 +239,12 @@ export default function Contabilita() {
         onOpenChange={setUscitaOpen}
         onSave={(data) => addUscitaMutation.mutate(data)}
         isSaving={addUscitaMutation.isPending}
+      />
+      <EntrataDialog
+        open={entrataOpen}
+        onOpenChange={setEntrataOpen}
+        onSave={(data) => addEntrataMutation.mutate(data)}
+        isSaving={addEntrataMutation.isPending}
       />
       <CategorieSpesaDialog open={categorieOpen} onOpenChange={setCategorieOpen} />
     </motion.div>
