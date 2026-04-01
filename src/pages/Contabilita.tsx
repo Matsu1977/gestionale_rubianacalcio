@@ -240,6 +240,12 @@ export default function Contabilita() {
         onSave={(data) => addUscitaMutation.mutate(data)}
         isSaving={addUscitaMutation.isPending}
       />
+      <EntrataDialog
+        open={entrataOpen}
+        onOpenChange={setEntrataOpen}
+        onSave={(data) => addEntrataMutation.mutate(data)}
+        isSaving={addEntrataMutation.isPending}
+      />
       <CategorieSpesaDialog open={categorieOpen} onOpenChange={setCategorieOpen} />
     </motion.div>
   );
