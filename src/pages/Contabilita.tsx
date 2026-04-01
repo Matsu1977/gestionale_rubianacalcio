@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import UscitaDialog from "@/components/contabilita/UscitaDialog";
+import EntrataDialog from "@/components/contabilita/EntrataDialog";
 import CategorieSpesaDialog from "@/components/contabilita/CategorieSpesaDialog";
 
 type Movimento = Tables<"movimenti">;
