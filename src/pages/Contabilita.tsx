@@ -74,6 +74,34 @@ export default function Contabilita() {
     onError: (e) => toast.error("Errore: " + e.message),
   });
 
+  const addEntrataMutation = useMutation({
+    mutationFn: async (payload: {
+      data: string;
+      importo: number;
+      categoria_entrata: string;
+      descrizione: string;
+      metodo_pagamento: MetodoPag;
+      persona: string | null;
+    }) => {
+      const { error } = await supabase.from("movimenti").insert({
+        data: payload.data,
+        importo: payload.importo,
+        tipo: "Entrata",
+        categoria: "Altro",
+        metodo_pagamento: payload.metodo_pagamento,
+        riferimento: payload.persona || undefined,
+        note: `[${payload.categoria_entrata}] ${payload.descrizione}`,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["movimenti-all"] });
+      toast.success("Entrata registrata");
+      setEntrataOpen(false);
+    },
+    onError: (e) => toast.error("Errore: " + e.message),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("movimenti").delete().eq("id", id);
