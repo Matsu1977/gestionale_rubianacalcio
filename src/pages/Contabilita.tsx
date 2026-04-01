@@ -20,6 +20,7 @@ type MetodoPag = Database["public"]["Enums"]["metodo_pagamento"];
 export default function Contabilita() {
   const queryClient = useQueryClient();
   const [uscitaOpen, setUscitaOpen] = useState(false);
+  const [entrataOpen, setEntrataOpen] = useState(false);
   const [categorieOpen, setCategorieOpen] = useState(false);
 
   const { data: movimenti = [], isLoading } = useQuery({
