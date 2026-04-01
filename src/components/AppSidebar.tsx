@@ -7,11 +7,11 @@ import {
   Wallet,
   MessageSquare,
   BarChart3,
-  Shield,
   Settings,
   LogOut,
   ClipboardCheck,
 } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
