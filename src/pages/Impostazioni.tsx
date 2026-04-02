@@ -60,6 +60,8 @@ export default function Impostazioni() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState<string | null>(null);
   const [showLinkDialog, setShowLinkDialog] = useState<UserWithRole | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState<UserWithRole | null>(null);
+  const [editData, setEditData] = useState({ email: "", full_name: "" });
   const [newUser, setNewUser] = useState({ email: "", password: "", full_name: "", role: "allenatore" });
   const [newPassword, setNewPassword] = useState("");
   const [selectedPersonaId, setSelectedPersonaId] = useState("");

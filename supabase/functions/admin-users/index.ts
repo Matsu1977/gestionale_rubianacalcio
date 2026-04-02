@@ -105,6 +105,32 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "update_user") {
+      const { user_id, email, full_name } = params;
+      if (!user_id) throw new Error("user_id è obbligatorio");
+
+      // Update auth user
+      const updates: Record<string, any> = {};
+      if (email) updates.email = email;
+      if (full_name !== undefined) updates.user_metadata = { full_name };
+      if (Object.keys(updates).length > 0) {
+        const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(user_id, updates);
+        if (authErr) throw authErr;
+      }
+
+      // Update profile
+      const profileUpdates: Record<string, any> = {};
+      if (email) profileUpdates.email = email;
+      if (full_name !== undefined) profileUpdates.full_name = full_name;
+      if (Object.keys(profileUpdates).length > 0) {
+        await supabaseAdmin.from("profiles").update(profileUpdates).eq("id", user_id);
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "update_role") {
       const { user_id, role } = params;
       if (!user_id || !role) throw new Error("user_id e role sono obbligatori");
