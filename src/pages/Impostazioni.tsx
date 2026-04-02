@@ -324,6 +324,14 @@ export default function Impostazioni() {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                title="Modifica utente"
+                                onClick={() => { setShowEditDialog(u); setEditData({ email: u.email, full_name: u.full_name }); }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 title="Modifica password"
                                 onClick={() => setShowPasswordDialog(u.id)}
                               >
