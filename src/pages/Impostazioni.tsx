@@ -175,6 +175,17 @@ export default function Impostazioni() {
     onError: (err: any) => toast.error(err.message),
   });
 
+  const updateUserMutation = useMutation({
+    mutationFn: ({ userId, email, full_name }: { userId: string; email: string; full_name: string }) =>
+      callAdminApi("update_user", { user_id: userId, email, full_name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success("Utente aggiornato");
+      setShowEditDialog(null);
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
   if (currentRole !== "admin") {
     return (
       <div className="flex items-center justify-center h-64">
