@@ -25,18 +25,17 @@ export default function Presenze() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showStats, setShowStats] = useState(false);
 
-  // Get distinct corsi from abbonamenti
+  // Get active corsi from corsi table
   const { data: corsi = [] } = useQuery({
     queryKey: ["corsi-presenze"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("abbonamenti")
-        .select("corso")
-        .eq("stato_pagamento", "Pagato")
-        .order("corso");
+        .from("corsi")
+        .select("nome")
+        .eq("attivo", true)
+        .order("nome");
       if (error) throw error;
-      const unique = [...new Set((data || []).map((a) => a.corso))];
-      return unique;
+      return (data || []).map((c) => c.nome);
     },
   });
 
