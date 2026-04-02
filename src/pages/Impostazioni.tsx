@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import {
-  Settings, Users, Shield, UserCog, Trash2, Loader2, KeyRound, Ban, CheckCircle2, UserPlus, Link, Unlink, CreditCard, BookOpen,
+  Settings, Users, Shield, UserCog, Trash2, Loader2, KeyRound, Ban, CheckCircle2, UserPlus, Link, Unlink, CreditCard, BookOpen, Pencil,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PaymentSettingsCard from "@/components/impostazioni/PaymentSettingsCard";
@@ -60,6 +60,8 @@ export default function Impostazioni() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState<string | null>(null);
   const [showLinkDialog, setShowLinkDialog] = useState<UserWithRole | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState<UserWithRole | null>(null);
+  const [editData, setEditData] = useState({ email: "", full_name: "" });
   const [newUser, setNewUser] = useState({ email: "", password: "", full_name: "", role: "allenatore" });
   const [newPassword, setNewPassword] = useState("");
   const [selectedPersonaId, setSelectedPersonaId] = useState("");
@@ -169,6 +171,17 @@ export default function Impostazioni() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       toast.success("Collegamento rimosso");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const updateUserMutation = useMutation({
+    mutationFn: ({ userId, email, full_name }: { userId: string; email: string; full_name: string }) =>
+      callAdminApi("update_user", { user_id: userId, email, full_name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success("Utente aggiornato");
+      setShowEditDialog(null);
     },
     onError: (err: any) => toast.error(err.message),
   });
@@ -308,6 +321,14 @@ export default function Impostazioni() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Modifica utente"
+                                onClick={() => { setShowEditDialog(u); setEditData({ email: u.email, full_name: u.full_name }); }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -465,6 +486,35 @@ export default function Impostazioni() {
             >
               {linkPersonaMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Collega
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Edit User Dialog */}
+      <Dialog open={!!showEditDialog} onOpenChange={() => setShowEditDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifica utente</DialogTitle>
+            <DialogDescription>Aggiorna i dati dell'utente.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome completo</Label>
+              <Input value={editData.full_name} onChange={(e) => setEditData({ ...editData, full_name: e.target.value })} placeholder="Mario Rossi" />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input type="email" value={editData.email} onChange={(e) => setEditData({ ...editData, email: e.target.value })} placeholder="email@esempio.it" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(null)}>Annulla</Button>
+            <Button
+              onClick={() => showEditDialog && updateUserMutation.mutate({ userId: showEditDialog.id, email: editData.email, full_name: editData.full_name })}
+              disabled={updateUserMutation.isPending || !editData.email}
+            >
+              {updateUserMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Salva
             </Button>
           </DialogFooter>
         </DialogContent>
