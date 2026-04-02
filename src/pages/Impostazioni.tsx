@@ -495,7 +495,7 @@ export default function Impostazioni() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Modifica utente</DialogTitle>
-            <DialogDescription>Aggiorna i dati dell'utente.</DialogDescription>
+            <DialogDescription>Aggiorna i dati dell'utente e collega l'anagrafica.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -506,14 +506,58 @@ export default function Impostazioni() {
               <Label>Email</Label>
               <Input type="email" value={editData.email} onChange={(e) => setEditData({ ...editData, email: e.target.value })} placeholder="email@esempio.it" />
             </div>
+            <div className="space-y-2">
+              <Label>Collegamento anagrafica</Label>
+              {showEditDialog?.persona_nome ? (
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-sm">{showEditDialog.persona_nome}</Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      unlinkPersonaMutation.mutate(showEditDialog.id);
+                      setShowEditDialog({ ...showEditDialog, persona_id: null, persona_nome: null });
+                    }}
+                  >
+                    <Unlink className="mr-1 h-3 w-3" />
+                    Scollega
+                  </Button>
+                </div>
+              ) : (
+                <Select value={selectedPersonaId} onValueChange={setSelectedPersonaId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona persona da collegare..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {persone.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.cognome} {p.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Collegando una persona, l'utente potrà accedere alla propria area personale.
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEditDialog(null)}>Annulla</Button>
             <Button
-              onClick={() => showEditDialog && updateUserMutation.mutate({ userId: showEditDialog.id, email: editData.email, full_name: editData.full_name })}
-              disabled={updateUserMutation.isPending || !editData.email}
+              onClick={async () => {
+                if (!showEditDialog) return;
+                await updateUserMutation.mutateAsync({ userId: showEditDialog.id, email: editData.email, full_name: editData.full_name });
+                if (selectedPersonaId && !showEditDialog.persona_id) {
+                  await linkPersonaMutation.mutateAsync({ userId: showEditDialog.id, personaId: selectedPersonaId });
+                  setSelectedPersonaId("");
+                }
+                setShowEditDialog(null);
+              }}
+              disabled={updateUserMutation.isPending || linkPersonaMutation.isPending || !editData.email}
             >
-              {updateUserMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {(updateUserMutation.isPending || linkPersonaMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Salva
             </Button>
           </DialogFooter>
