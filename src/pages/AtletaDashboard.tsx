@@ -222,7 +222,7 @@ export default function AtletaDashboard() {
               {persona.codice_fiscale && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Codice Fiscale</span>
-                  <span className="font-mono text-xs">{persona.codice_fiscale}</span>
+                  <span className="font-mono text-xs uppercase">{persona.codice_fiscale}</span>
                 </div>
               )}
               {persona.email && (
