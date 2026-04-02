@@ -490,6 +490,35 @@ export default function Impostazioni() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Edit User Dialog */}
+      <Dialog open={!!showEditDialog} onOpenChange={() => setShowEditDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifica utente</DialogTitle>
+            <DialogDescription>Aggiorna i dati dell'utente.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome completo</Label>
+              <Input value={editData.full_name} onChange={(e) => setEditData({ ...editData, full_name: e.target.value })} placeholder="Mario Rossi" />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input type="email" value={editData.email} onChange={(e) => setEditData({ ...editData, email: e.target.value })} placeholder="email@esempio.it" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(null)}>Annulla</Button>
+            <Button
+              onClick={() => showEditDialog && updateUserMutation.mutate({ userId: showEditDialog.id, email: editData.email, full_name: editData.full_name })}
+              disabled={updateUserMutation.isPending || !editData.email}
+            >
+              {updateUserMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Salva
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
