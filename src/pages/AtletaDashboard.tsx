@@ -158,6 +158,28 @@ export default function AtletaDashboard() {
     enabled: !!persona,
   });
 
+  // Get payment info settings
+  const { data: paymentInfo } = useQuery({
+    queryKey: ["payment-info-atleta"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("impostazioni_generali")
+        .select("chiave, valore")
+        .like("chiave", "pagamento_%");
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach((s) => { map[s.chiave] = s.valore || ""; });
+      return map;
+    },
+  });
+
+  const hasPaymentInfo = paymentInfo && (paymentInfo.pagamento_iban || paymentInfo.pagamento_intestatario);
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Copiato negli appunti");
+  };
+
   const today = new Date();
   const certScaduto = persona?.certificato_medico_scadenza
     ? isBefore(parseISO(persona.certificato_medico_scadenza), today)
