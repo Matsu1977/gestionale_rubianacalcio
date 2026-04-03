@@ -38,7 +38,7 @@ const DOCUMENT_CONTENT: Record<string, (p: Persona) => string[]> = {
     "INFORMATIVA SULLA PRIVACY (GDPR)",
     "",
     `Il/La sottoscritto/a ${p.nome} ${p.cognome}`,
-    p.codice_fiscale ? `C.F.: ${p.codice_fiscale}` : "",
+    p.codice_fiscale ? `C.F.: ${p.codice_fiscale.toUpperCase()}` : "",
     "",
     "dichiara di aver ricevuto l'informativa ai sensi dell'art. 13 del Regolamento UE 2016/679",
     "(GDPR) relativa al trattamento dei dati personali e di acconsentire al trattamento",
