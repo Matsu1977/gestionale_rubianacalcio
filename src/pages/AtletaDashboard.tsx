@@ -330,6 +330,73 @@ export default function AtletaDashboard() {
         </motion.div>
       )}
 
+      {/* Dati per il pagamento */}
+      {hasPaymentInfo && (
+        <motion.div variants={item} initial="hidden" animate="show">
+          <Card className="glass-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Landmark className="h-5 w-5 text-primary" />
+                Dati per il Pagamento
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {paymentInfo.pagamento_intestatario && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Intestatario</span>
+                  <span className="font-medium">{paymentInfo.pagamento_intestatario}</span>
+                </div>
+              )}
+              {paymentInfo.pagamento_iban && (
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-muted-foreground">IBAN</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-mono text-xs font-medium">{paymentInfo.pagamento_iban}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => copyToClipboard(paymentInfo.pagamento_iban)}
+                      title="Copia IBAN"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {paymentInfo.pagamento_banca && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Banca</span>
+                  <span>{paymentInfo.pagamento_banca}</span>
+                </div>
+              )}
+              {paymentInfo.pagamento_causale && (
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-muted-foreground">Causale</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs">{paymentInfo.pagamento_causale}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => copyToClipboard(paymentInfo.pagamento_causale)}
+                      title="Copia causale"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {paymentInfo.pagamento_note && (
+                <div className="mt-3 p-3 rounded-lg bg-muted/50">
+                  <p className="text-xs text-muted-foreground whitespace-pre-line">{paymentInfo.pagamento_note}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Abbonamento info */}
         <motion.div variants={item} initial="hidden" animate="show">
