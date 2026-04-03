@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
-import { User, CalendarCheck, Wallet, FileCheck, MessageSquare, ClipboardCheck } from "lucide-react";
+import { User, CalendarCheck, Wallet, FileCheck, MessageSquare, ClipboardCheck, Landmark, Copy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -158,6 +159,28 @@ export default function AtletaDashboard() {
     enabled: !!persona,
   });
 
+  // Get payment info settings
+  const { data: paymentInfo } = useQuery({
+    queryKey: ["payment-info-atleta"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("impostazioni_generali")
+        .select("chiave, valore")
+        .like("chiave", "pagamento_%");
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach((s) => { map[s.chiave] = s.valore || ""; });
+      return map;
+    },
+  });
+
+  const hasPaymentInfo = paymentInfo && (paymentInfo.pagamento_iban || paymentInfo.pagamento_intestatario);
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Copiato negli appunti");
+  };
+
   const today = new Date();
   const certScaduto = persona?.certificato_medico_scadenza
     ? isBefore(parseISO(persona.certificato_medico_scadenza), today)
@@ -305,6 +328,73 @@ export default function AtletaDashboard() {
           {rateByAbbonamento.map(({ abbonamento, rate }) => (
             <RateListCard key={abbonamento.id} rate={rate} abbonamento={abbonamento} />
           ))}
+        </motion.div>
+      )}
+
+      {/* Dati per il pagamento */}
+      {hasPaymentInfo && (
+        <motion.div variants={item} initial="hidden" animate="show">
+          <Card className="glass-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Landmark className="h-5 w-5 text-primary" />
+                Dati per il Pagamento
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {paymentInfo.pagamento_intestatario && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Intestatario</span>
+                  <span className="font-medium">{paymentInfo.pagamento_intestatario}</span>
+                </div>
+              )}
+              {paymentInfo.pagamento_iban && (
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-muted-foreground">IBAN</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-mono text-xs font-medium">{paymentInfo.pagamento_iban}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => copyToClipboard(paymentInfo.pagamento_iban)}
+                      title="Copia IBAN"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {paymentInfo.pagamento_banca && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Banca</span>
+                  <span>{paymentInfo.pagamento_banca}</span>
+                </div>
+              )}
+              {paymentInfo.pagamento_causale && (
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-muted-foreground">Causale</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs">{paymentInfo.pagamento_causale}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => copyToClipboard(paymentInfo.pagamento_causale)}
+                      title="Copia causale"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {paymentInfo.pagamento_note && (
+                <div className="mt-3 p-3 rounded-lg bg-muted/50">
+                  <p className="text-xs text-muted-foreground whitespace-pre-line">{paymentInfo.pagamento_note}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </motion.div>
       )}
 
