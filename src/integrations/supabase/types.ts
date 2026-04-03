@@ -207,6 +207,36 @@ export type Database = {
           },
         ]
       }
+      modelli_documento: {
+        Row: {
+          attivo: boolean
+          contenuto: string
+          created_at: string
+          id: string
+          tipo_documento: string
+          titolo: string
+          updated_at: string
+        }
+        Insert: {
+          attivo?: boolean
+          contenuto: string
+          created_at?: string
+          id?: string
+          tipo_documento: string
+          titolo: string
+          updated_at?: string
+        }
+        Update: {
+          attivo?: boolean
+          contenuto?: string
+          created_at?: string
+          id?: string
+          tipo_documento?: string
+          titolo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       movimenti: {
         Row: {
           categoria: Database["public"]["Enums"]["categoria_movimento"]
