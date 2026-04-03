@@ -87,7 +87,7 @@ export default function PersonaDialog({ open, onOpenChange, persona, personaRuol
     const data: TablesInsert<"persone"> & { id?: string } = {
       nome: values.nome,
       cognome: values.cognome,
-      codice_fiscale: values.codice_fiscale || null,
+      codice_fiscale: values.codice_fiscale ? values.codice_fiscale.toUpperCase() : null,
       data_nascita: values.data_nascita || null,
       telefono: values.telefono || null,
       email: values.email || null,
