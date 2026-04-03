@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -13,71 +13,22 @@ import SignatureCanvas from "./SignatureCanvas";
 
 type Persona = Tables<"persone">;
 
-const TIPI_DOCUMENTO = [
-  { value: "Modulo iscrizione", label: "Modulo iscrizione" },
-  { value: "Informativa privacy", label: "Informativa privacy (GDPR)" },
-  { value: "Liberatoria medica", label: "Liberatoria medica" },
-  { value: "Autorizzazione minori", label: "Autorizzazione minori" },
-];
+function resolveTemplate(template: string, persona: Persona): string {
+  const dataFmt = (d: string | null) =>
+    d ? new Date(d).toLocaleDateString("it-IT") : "non disponibile";
 
-const DOCUMENT_CONTENT: Record<string, (p: Persona) => string[]> = {
-  "Modulo iscrizione": (p) => [
-    "MODULO DI ISCRIZIONE",
-    "",
-    `Il/La sottoscritto/a ${p.nome} ${p.cognome}`,
-    p.codice_fiscale ? `C.F.: ${p.codice_fiscale.toUpperCase()}` : "",
-    p.data_nascita ? `Nato/a il: ${new Date(p.data_nascita).toLocaleDateString("it-IT")}` : "",
-    p.indirizzo ? `Residente in: ${p.indirizzo}` : "",
-    "",
-    "chiede di essere iscritto/a presso l'Associazione Sportiva per la stagione in corso.",
-    "",
-    "Dichiara di aver preso visione dello statuto e del regolamento interno",
-    "e di accettarne integralmente il contenuto.",
-  ],
-  "Informativa privacy": (p) => [
-    "INFORMATIVA SULLA PRIVACY (GDPR)",
-    "",
-    `Il/La sottoscritto/a ${p.nome} ${p.cognome}`,
-    p.codice_fiscale ? `C.F.: ${p.codice_fiscale.toUpperCase()}` : "",
-    "",
-    "dichiara di aver ricevuto l'informativa ai sensi dell'art. 13 del Regolamento UE 2016/679",
-    "(GDPR) relativa al trattamento dei dati personali e di acconsentire al trattamento",
-    "dei propri dati per le finalità indicate nell'informativa.",
-    "",
-    "I dati saranno trattati con strumenti informatici e/o cartacei,",
-    "nel rispetto delle misure di sicurezza previste dalla normativa vigente.",
-  ],
-  "Liberatoria medica": (p) => [
-    "LIBERATORIA MEDICA / SCARICO RESPONSABILITÀ",
-    "",
-    `Il/La sottoscritto/a ${p.nome} ${p.cognome}`,
-    p.codice_fiscale ? `C.F.: ${p.codice_fiscale.toUpperCase()}` : "",
-    "",
-    "dichiara di essere in buono stato di salute e di essere idoneo/a",
-    "alla pratica dell'attività sportiva non agonistica.",
-    "",
-    "Solleva l'Associazione Sportiva da ogni responsabilità per danni",
-    "derivanti dalla propria partecipazione alle attività sportive.",
-    "",
-    p.certificato_medico_scadenza
-      ? `Certificato medico in scadenza il: ${new Date(p.certificato_medico_scadenza).toLocaleDateString("it-IT")}`
-      : "Certificato medico: non presente",
-  ],
-  "Autorizzazione minori": (p) => [
-    "AUTORIZZAZIONE PER ATLETI MINORENNI",
-    "",
-    `Il/La sottoscritto/a (genitore/tutore)`,
-    "",
-    `autorizza il/la minore ${p.nome} ${p.cognome}`,
-    p.codice_fiscale ? `C.F.: ${p.codice_fiscale.toUpperCase()}` : "",
-    p.data_nascita ? `Nato/a il: ${new Date(p.data_nascita).toLocaleDateString("it-IT")}` : "",
-    "",
-    "a partecipare alle attività sportive organizzate dall'Associazione.",
-    "",
-    "Si impegna a comunicare tempestivamente eventuali variazioni",
-    "dello stato di salute del/della minore.",
-  ],
-};
+  return template
+    .replace(/\{nome\}/g, persona.nome)
+    .replace(/\{cognome\}/g, persona.cognome)
+    .replace(/\{codice_fiscale\}/g, persona.codice_fiscale?.toUpperCase() || "non disponibile")
+    .replace(/\{data_nascita\}/g, dataFmt(persona.data_nascita))
+    .replace(/\{indirizzo\}/g, persona.indirizzo || "non disponibile")
+    .replace(/\{certificato_medico\}/g,
+      persona.certificato_medico_scadenza
+        ? `in scadenza il ${dataFmt(persona.certificato_medico_scadenza)}`
+        : "non presente"
+    );
+}
 
 interface Props {
   open: boolean;
@@ -90,26 +41,45 @@ export default function DocumentoFirmaDialog({ open, onOpenChange, persona }: Pr
   const [tipoDocumento, setTipoDocumento] = useState("");
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
 
+  const { data: modelli = [] } = useQuery({
+    queryKey: ["modelli-documento-attivi"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("modelli_documento")
+        .select("*")
+        .eq("attivo", true)
+        .order("created_at");
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
+  const selectedModello = modelli.find((m) => m.tipo_documento === tipoDocumento);
+  const previewContent = selectedModello ? resolveTemplate(selectedModello.contenuto, persona) : "";
+
   const handleSignatureChange = useCallback((dataUrl: string | null) => {
     setSignatureDataUrl(dataUrl);
   }, []);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!tipoDocumento || !signatureDataUrl) throw new Error("Completa tutti i campi");
+      if (!tipoDocumento || !signatureDataUrl || !selectedModello) throw new Error("Completa tutti i campi");
+
+      const resolvedText = resolveTemplate(selectedModello.contenuto, persona);
+      const lines = resolvedText.split("\n");
 
       // Generate PDF
       const doc = new jsPDF();
-      const lines = DOCUMENT_CONTENT[tipoDocumento]?.(persona) || [];
-      
+
       doc.setFontSize(10);
       doc.setTextColor(150);
       doc.text("Documento generato digitalmente", 105, 15, { align: "center" });
-      
+
       doc.setFontSize(14);
       doc.setTextColor(0);
       let y = 30;
-      
+
       for (const line of lines) {
         if (line === lines[0]) {
           doc.setFontSize(16);
@@ -117,7 +87,7 @@ export default function DocumentoFirmaDialog({ open, onOpenChange, persona }: Pr
           doc.text(line, 105, y, { align: "center" });
           doc.setFont("helvetica", "normal");
           doc.setFontSize(11);
-        } else if (line === "") {
+        } else if (line.trim() === "") {
           y += 4;
         } else {
           doc.text(line, 20, y);
@@ -132,7 +102,6 @@ export default function DocumentoFirmaDialog({ open, onOpenChange, persona }: Pr
       y += 10;
       doc.text("Firma:", 20, y);
 
-      // Add signature image
       const img = new Image();
       img.src = signatureDataUrl;
       await new Promise((resolve) => { img.onload = resolve; });
@@ -143,17 +112,14 @@ export default function DocumentoFirmaDialog({ open, onOpenChange, persona }: Pr
       doc.setTextColor(150);
       doc.text(`Firmato digitalmente da ${persona.nome} ${persona.cognome} in data ${dataFirma}`, 105, y, { align: "center" });
 
-      // Convert to blob
       const pdfBlob = doc.output("blob");
 
-      // Upload to storage
       const fileName = `${persona.id}/${tipoDocumento.replace(/\s/g, "_")}_${Date.now()}.pdf`;
       const { error: uploadError } = await supabase.storage
         .from("documenti-firmati")
         .upload(fileName, pdfBlob, { contentType: "application/pdf" });
       if (uploadError) throw uploadError;
 
-      // Save record
       const { error: dbError } = await supabase.from("documenti_firmati").insert({
         persona_id: persona.id,
         tipo_documento: tipoDocumento,
@@ -193,18 +159,18 @@ export default function DocumentoFirmaDialog({ open, onOpenChange, persona }: Pr
                 <SelectValue placeholder="Seleziona tipo documento..." />
               </SelectTrigger>
               <SelectContent>
-                {TIPI_DOCUMENTO.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                {modelli.map((m) => (
+                  <SelectItem key={m.id} value={m.tipo_documento}>{m.titolo}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {tipoDocumento && (
+          {tipoDocumento && previewContent && (
             <div className="rounded-lg border bg-muted/30 p-3 max-h-[150px] overflow-y-auto">
               <p className="text-xs text-muted-foreground mb-1">Anteprima contenuto:</p>
-              {(DOCUMENT_CONTENT[tipoDocumento]?.(persona) || []).map((line, i) => (
-                <p key={i} className={`text-xs ${i === 0 ? "font-bold text-sm" : ""} ${line === "" ? "h-2" : ""}`}>
+              {previewContent.split("\n").map((line, i) => (
+                <p key={i} className={`text-xs ${i === 0 ? "font-bold text-sm" : ""} ${line.trim() === "" ? "h-2" : ""}`}>
                   {line}
                 </p>
               ))}
