@@ -51,7 +51,7 @@ const DOCUMENT_CONTENT: Record<string, (p: Persona) => string[]> = {
     "LIBERATORIA MEDICA / SCARICO RESPONSABILITÀ",
     "",
     `Il/La sottoscritto/a ${p.nome} ${p.cognome}`,
-    p.codice_fiscale ? `C.F.: ${p.codice_fiscale}` : "",
+    p.codice_fiscale ? `C.F.: ${p.codice_fiscale.toUpperCase()}` : "",
     "",
     "dichiara di essere in buono stato di salute e di essere idoneo/a",
     "alla pratica dell'attività sportiva non agonistica.",
