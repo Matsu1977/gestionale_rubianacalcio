@@ -207,6 +207,30 @@ export type Database = {
           },
         ]
       }
+      impostazioni_generali: {
+        Row: {
+          chiave: string
+          created_at: string
+          id: string
+          updated_at: string
+          valore: string | null
+        }
+        Insert: {
+          chiave: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          valore?: string | null
+        }
+        Update: {
+          chiave?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          valore?: string | null
+        }
+        Relationships: []
+      }
       modelli_documento: {
         Row: {
           attivo: boolean
