@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import {
-  Settings, Users, Shield, UserCog, Trash2, Loader2, KeyRound, Ban, CheckCircle2, UserPlus, Link, Unlink, CreditCard, BookOpen, Pencil,
+  Settings, Users, Shield, UserCog, Trash2, Loader2, KeyRound, Ban, CheckCircle2, UserPlus, Link, Unlink, CreditCard, BookOpen, Pencil, FileText,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PaymentSettingsCard from "@/components/impostazioni/PaymentSettingsCard";
 import CorsiSettingsCard from "@/components/impostazioni/CorsiSettingsCard";
+import DocumentiSettingsCard from "@/components/impostazioni/DocumentiSettingsCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -226,6 +227,10 @@ export default function Impostazioni() {
             <CreditCard className="h-4 w-4" />
             Pagamenti
           </TabsTrigger>
+          <TabsTrigger value="documenti" className="gap-2">
+            <FileText className="h-4 w-4" />
+            Documenti
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="utenti">
@@ -384,6 +389,10 @@ export default function Impostazioni() {
 
         <TabsContent value="pagamenti">
           <PaymentSettingsCard />
+        </TabsContent>
+
+        <TabsContent value="documenti">
+          <DocumentiSettingsCard />
         </TabsContent>
       </Tabs>
 
