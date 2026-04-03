@@ -69,7 +69,7 @@ const DOCUMENT_CONTENT: Record<string, (p: Persona) => string[]> = {
     `Il/La sottoscritto/a (genitore/tutore)`,
     "",
     `autorizza il/la minore ${p.nome} ${p.cognome}`,
-    p.codice_fiscale ? `C.F.: ${p.codice_fiscale}` : "",
+    p.codice_fiscale ? `C.F.: ${p.codice_fiscale.toUpperCase()}` : "",
     p.data_nascita ? `Nato/a il: ${new Date(p.data_nascita).toLocaleDateString("it-IT")}` : "",
     "",
     "a partecipare alle attività sportive organizzate dall'Associazione.",
