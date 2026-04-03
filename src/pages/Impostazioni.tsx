@@ -9,6 +9,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PaymentSettingsCard from "@/components/impostazioni/PaymentSettingsCard";
 import CorsiSettingsCard from "@/components/impostazioni/CorsiSettingsCard";
+import DocumentiSettingsCard from "@/components/impostazioni/DocumentiSettingsCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
