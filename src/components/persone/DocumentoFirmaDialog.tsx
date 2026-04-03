@@ -25,7 +25,7 @@ const DOCUMENT_CONTENT: Record<string, (p: Persona) => string[]> = {
     "MODULO DI ISCRIZIONE",
     "",
     `Il/La sottoscritto/a ${p.nome} ${p.cognome}`,
-    p.codice_fiscale ? `C.F.: ${p.codice_fiscale}` : "",
+    p.codice_fiscale ? `C.F.: ${p.codice_fiscale.toUpperCase()}` : "",
     p.data_nascita ? `Nato/a il: ${new Date(p.data_nascita).toLocaleDateString("it-IT")}` : "",
     p.indirizzo ? `Residente in: ${p.indirizzo}` : "",
     "",
