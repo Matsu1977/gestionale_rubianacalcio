@@ -227,6 +227,10 @@ export default function Impostazioni() {
             <CreditCard className="h-4 w-4" />
             Pagamenti
           </TabsTrigger>
+          <TabsTrigger value="documenti" className="gap-2">
+            <FileText className="h-4 w-4" />
+            Documenti
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="utenti">
