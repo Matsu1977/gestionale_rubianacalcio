@@ -390,6 +390,10 @@ export default function Impostazioni() {
         <TabsContent value="pagamenti">
           <PaymentSettingsCard />
         </TabsContent>
+
+        <TabsContent value="documenti">
+          <DocumentiSettingsCard />
+        </TabsContent>
       </Tabs>
 
       {/* Create User Dialog */}
