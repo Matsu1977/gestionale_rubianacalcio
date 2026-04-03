@@ -388,7 +388,8 @@ export default function Impostazioni() {
           <CorsiSettingsCard />
         </TabsContent>
 
-        <TabsContent value="pagamenti">
+        <TabsContent value="pagamenti" className="space-y-6">
+          <DatiPagamentoSettingsCard />
           <PaymentSettingsCard />
         </TabsContent>
 
