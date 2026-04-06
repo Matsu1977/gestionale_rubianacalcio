@@ -1,8 +1,14 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { NotificationBell } from "@/components/NotificationBell";
+import { SendNotificaDialog } from "@/components/SendNotificaDialog";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -13,7 +19,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <h2 className="text-sm font-medium text-muted-foreground hidden sm:block">
               Gestionale Rubiana Calcio
             </h2>
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-2">
+              {isAdmin && <SendNotificaDialog />}
+              <NotificationBell />
               <GlobalSearch />
             </div>
           </header>
