@@ -314,6 +314,68 @@ export type Database = {
           },
         ]
       }
+      notifiche: {
+        Row: {
+          created_at: string
+          id: string
+          letta: boolean
+          messaggio: string
+          ruolo_destinatario: string | null
+          tipo: string
+          titolo: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          letta?: boolean
+          messaggio: string
+          ruolo_destinatario?: string | null
+          tipo?: string
+          titolo: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          letta?: boolean
+          messaggio?: string
+          ruolo_destinatario?: string | null
+          tipo?: string
+          titolo?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      notifiche_lette: {
+        Row: {
+          created_at: string
+          id: string
+          notifica_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notifica_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notifica_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifiche_lette_notifica_id_fkey"
+            columns: ["notifica_id"]
+            isOneToOne: false
+            referencedRelation: "notifiche"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       persone: {
         Row: {
           certificato_medico_scadenza: string | null
