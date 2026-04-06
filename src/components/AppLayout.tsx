@@ -20,7 +20,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               Gestionale Rubiana Calcio
             </h2>
             <div className="ml-auto flex items-center gap-2">
-              {isAdmin && <SendNotificaDialog />}
+              {(role === "admin" || role === "allenatore" || role === "atleta") && <SendNotificaDialog />}
               <NotificationBell />
               <GlobalSearch />
             </div>
