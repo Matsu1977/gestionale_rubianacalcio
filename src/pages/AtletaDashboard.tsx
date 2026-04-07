@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { User, CalendarCheck, Wallet, FileCheck, MessageSquare, ClipboardCheck, Landmark, Copy } from "lucide-react";
+import { User, CalendarCheck, Wallet, FileCheck, MessageSquare, ClipboardCheck, Landmark, Copy, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
