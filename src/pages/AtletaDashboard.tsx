@@ -175,7 +175,7 @@ export default function AtletaDashboard() {
     },
   });
 
-  const hasPaymentInfo = paymentInfo && (paymentInfo.pagamento_iban || paymentInfo.pagamento_intestatario);
+  const hasPaymentInfo = paymentInfo && (paymentInfo.pagamento_iban || paymentInfo.pagamento_intestatario || paymentInfo.pagamento_paypal_link);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
