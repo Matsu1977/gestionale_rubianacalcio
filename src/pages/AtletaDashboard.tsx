@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { format, parseISO, isBefore } from "date-fns";
 import { it } from "date-fns/locale";
 import { RateListCard } from "@/components/atleta/RateListCard";
+import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -209,11 +210,14 @@ export default function AtletaDashboard() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">La mia Area</h1>
-        <p className="text-muted-foreground mt-1">
-          Benvenuto, {persona.nome} {persona.cognome}
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">La mia Area</h1>
+          <p className="text-muted-foreground mt-1">
+            Benvenuto, {persona.nome} {persona.cognome}
+          </p>
+        </div>
+        <ChangePasswordDialog />
       </div>
 
       <motion.div

@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { format, addDays, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
 
@@ -167,11 +168,14 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Panoramica della stagione 2025/2026
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Panoramica della stagione 2025/2026
+          </p>
+        </div>
+        {isAllenatore && <ChangePasswordDialog />}
       </div>
 
       <motion.div
