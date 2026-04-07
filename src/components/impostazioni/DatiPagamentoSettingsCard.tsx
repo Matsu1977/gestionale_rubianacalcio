@@ -14,6 +14,7 @@ const PAYMENT_KEYS = [
   { key: "pagamento_intestatario", label: "Intestatario", placeholder: "ASD Nome Associazione" },
   { key: "pagamento_banca", label: "Banca", placeholder: "Nome Banca - Filiale" },
   { key: "pagamento_causale", label: "Causale suggerita", placeholder: "Quota associativa / Abbonamento" },
+  { key: "pagamento_paypal_link", label: "Link PayPal", placeholder: "https://paypal.me/tuolink" },
 ];
 
 export default function DatiPagamentoSettingsCard() {
