@@ -397,17 +397,30 @@ export default function AtletaDashboard() {
                   <p className="text-xs text-muted-foreground whitespace-pre-line">{paymentInfo.pagamento_note}</p>
                 </div>
               )}
-              {paymentInfo.pagamento_paypal_link && (
-                <div className="mt-4 pt-3 border-t">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 w-full"
-                    onClick={() => window.open(paymentInfo.pagamento_paypal_link, "_blank")}
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Paga con PayPal
-                  </Button>
+              {(paymentInfo.pagamento_paypal_link || paymentInfo.pagamento_satispay_link) && (
+                <div className="mt-4 pt-3 border-t flex flex-col gap-2">
+                  {paymentInfo.pagamento_paypal_link && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 w-full"
+                      onClick={() => window.open(paymentInfo.pagamento_paypal_link, "_blank")}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Paga con PayPal
+                    </Button>
+                  )}
+                  {paymentInfo.pagamento_satispay_link && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 w-full"
+                      onClick={() => window.open(paymentInfo.pagamento_satispay_link, "_blank")}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Paga con Satispay
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>
