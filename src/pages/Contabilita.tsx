@@ -227,15 +227,35 @@ export default function Contabilita() {
         </Card>
       </div>
 
+      <div className="flex items-center gap-3 flex-wrap">
+        <Filter className="h-4 w-4 text-muted-foreground" />
+        <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="Filtra per categoria" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="tutte">Tutte le categorie</SelectItem>
+            {tutteCategorie.map((c) => (
+              <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {filtroCategoria !== "tutte" && (
+          <Button variant="ghost" size="sm" onClick={() => setFiltroCategoria("tutte")}>
+            Rimuovi filtro
+          </Button>
+        )}
+      </div>
+
       <div className="rounded-lg border bg-card">
         {isLoading ? (
           <div className="flex items-center justify-center py-20 text-muted-foreground">Caricamento...</div>
-        ) : movimenti.length === 0 ? (
+        ) : movimentiFiltrati.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="p-4 rounded-2xl bg-primary/10 mb-4">
               <Wallet className="h-10 w-10 text-primary" />
             </div>
-            <p className="text-lg font-semibold">Nessun movimento registrato</p>
+            <p className="text-lg font-semibold">{filtroCategoria !== "tutte" ? "Nessun movimento per questa categoria" : "Nessun movimento registrato"}</p>
             <p className="text-sm text-muted-foreground mt-1">I movimenti appariranno qui quando verranno registrati pagamenti</p>
           </div>
         ) : (
@@ -253,7 +273,7 @@ export default function Contabilita() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {movimenti.map((m) => (
+              {movimentiFiltrati.map((m) => (
                 <TableRow key={m.id}>
                   <TableCell className="text-sm">{new Date(m.data).toLocaleDateString("it-IT")}</TableCell>
                   <TableCell>
