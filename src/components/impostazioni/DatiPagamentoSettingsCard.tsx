@@ -15,6 +15,7 @@ const PAYMENT_KEYS = [
   { key: "pagamento_banca", label: "Banca", placeholder: "Nome Banca - Filiale" },
   { key: "pagamento_causale", label: "Causale suggerita", placeholder: "Quota associativa / Abbonamento" },
   { key: "pagamento_paypal_link", label: "Link PayPal", placeholder: "https://paypal.me/tuolink" },
+  { key: "pagamento_satispay_link", label: "Link Satispay", placeholder: "https://satispay.com/tuolink" },
 ];
 
 export default function DatiPagamentoSettingsCard() {
