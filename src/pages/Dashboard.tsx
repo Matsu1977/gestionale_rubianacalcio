@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Users,
@@ -14,8 +15,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
-import { format, addDays, parseISO } from "date-fns";
+import { format, addDays, parseISO, subMonths } from "date-fns";
 import { it } from "date-fns/locale";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, LineChart, Line, Legend,
+} from "recharts";
 
 const container = {
   hidden: { opacity: 0 },
@@ -29,6 +34,27 @@ const item = {
   hidden: { opacity: 0, y: 16 },
   show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } },
 };
+
+const CHART_COLORS = {
+  entrate: "hsl(152, 45%, 35%)",
+  uscite: "hsl(0, 72%, 51%)",
+  primary: "hsl(152, 45%, 22%)",
+  accent: "hsl(42, 80%, 55%)",
+  info: "hsl(200, 60%, 50%)",
+  muted: "hsl(210, 10%, 70%)",
+};
+
+const PIE_COLORS = [
+  "hsl(152, 45%, 35%)",
+  "hsl(42, 80%, 55%)",
+  "hsl(200, 60%, 50%)",
+  "hsl(340, 60%, 50%)",
+  "hsl(270, 50%, 55%)",
+  "hsl(30, 70%, 50%)",
+];
+
+const fmt = (n: number) =>
+  new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
 
 export default function Dashboard() {
   const { role } = useAuth();
@@ -78,7 +104,7 @@ export default function Dashboard() {
   const { data: allMovimenti } = useQuery({
     queryKey: ["movimenti-totals"],
     queryFn: async () => {
-      const { data } = await supabase.from("movimenti").select("tipo, importo");
+      const { data } = await supabase.from("movimenti").select("tipo, importo, data, categoria");
       return data || [];
     },
     enabled: !isAllenatore,
@@ -100,6 +126,74 @@ export default function Dashboard() {
   const totEntrate = (allMovimenti || []).filter((m) => m.tipo === "Entrata").reduce((s, m) => s + Number(m.importo), 0);
   const totUscite = (allMovimenti || []).filter((m) => m.tipo === "Uscita").reduce((s, m) => s + Number(m.importo), 0);
   const saldo = totEntrate - totUscite;
+
+  // Chart data: Entrate/Uscite per mese (ultimi 6 mesi)
+  const monthlyTrend = useMemo(() => {
+    if (!allMovimenti || allMovimenti.length === 0) return [];
+    const months: { key: string; label: string }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = subMonths(new Date(), i);
+      months.push({
+        key: format(d, "yyyy-MM"),
+        label: format(d, "MMM", { locale: it }),
+      });
+    }
+    const map: Record<string, { entrate: number; uscite: number }> = {};
+    months.forEach((m) => { map[m.key] = { entrate: 0, uscite: 0 }; });
+    allMovimenti.forEach((m) => {
+      const key = m.data.substring(0, 7);
+      if (map[key]) {
+        if (m.tipo === "Entrata") map[key].entrate += Number(m.importo);
+        else map[key].uscite += Number(m.importo);
+      }
+    });
+    return months.map((m) => ({
+      name: m.label,
+      Entrate: Math.round(map[m.key].entrate * 100) / 100,
+      Uscite: Math.round(map[m.key].uscite * 100) / 100,
+    }));
+  }, [allMovimenti]);
+
+  // Chart data: Stato pagamenti abbonamenti
+  const abbonamentoStatusData = useMemo(() => {
+    if (!abbonamenti || abbonamenti.length === 0) return [];
+    const map: Record<string, number> = {};
+    abbonamenti.forEach((a) => {
+      map[a.stato_pagamento] = (map[a.stato_pagamento] || 0) + 1;
+    });
+    return Object.entries(map).map(([name, value]) => ({ name, value }));
+  }, [abbonamenti]);
+
+  // Chart data: Rate pagate vs non pagate
+  const rateStatusData = useMemo(() => {
+    if (!rate || rate.length === 0) return [];
+    const pagate = rate.filter((r) => r.stato === "Pagata").length;
+    const nonPagate = rate.filter((r) => r.stato !== "Pagata").length;
+    return [
+      { name: "Pagate", value: pagate },
+      { name: "Da pagare", value: nonPagate },
+    ].filter((d) => d.value > 0);
+  }, [rate]);
+
+  // Chart data: Nuove iscrizioni per mese (ultimi 6 mesi)
+  const iscrizioni = useMemo(() => {
+    if (!tesseramenti || tesseramenti.length === 0) return [];
+    const months: { key: string; label: string }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = subMonths(new Date(), i);
+      months.push({
+        key: format(d, "yyyy-MM"),
+        label: format(d, "MMM", { locale: it }),
+      });
+    }
+    const map: Record<string, number> = {};
+    months.forEach((m) => { map[m.key] = 0; });
+    tesseramenti.forEach((t) => {
+      const key = t.data_inizio.substring(0, 7);
+      if (map[key] !== undefined) map[key]++;
+    });
+    return months.map((m) => ({ name: m.label, Iscrizioni: map[m.key] }));
+  }, [tesseramenti]);
 
   const stats = [
     {
@@ -178,6 +272,7 @@ export default function Dashboard() {
         {isAllenatore && <ChangePasswordDialog />}
       </div>
 
+      {/* Stats Cards */}
       <motion.div
         className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
         variants={container}
@@ -203,6 +298,161 @@ export default function Dashboard() {
         ))}
       </motion.div>
 
+      {/* Charts Row */}
+      {!isAllenatore && (
+        <motion.div
+          className="grid gap-6 lg:grid-cols-2"
+          variants={container}
+          initial="hidden"
+          animate="show"
+        >
+          {/* Trend Entrate/Uscite */}
+          <motion.div variants={item}>
+            <Card className="glass-card">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Andamento Entrate / Uscite (6 mesi)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="h-[280px]">
+                {monthlyTrend.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={monthlyTrend} barGap={4}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(210,10%,85%)" />
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `€${v}`} />
+                      <Tooltip formatter={(v: number) => fmt(v)} />
+                      <Legend />
+                      <Bar dataKey="Entrate" fill={CHART_COLORS.entrate} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Uscite" fill={CHART_COLORS.uscite} radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-muted-foreground text-center pt-24 text-sm">Nessun movimento registrato</p>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Nuove Iscrizioni */}
+          <motion.div variants={item}>
+            <Card className="glass-card">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="h-4 w-4 text-info" />
+                  Nuove Iscrizioni (6 mesi)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="h-[280px]">
+                {iscrizioni.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={iscrizioni}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(210,10%,85%)" />
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                      <Tooltip />
+                      <Line
+                        type="monotone"
+                        dataKey="Iscrizioni"
+                        stroke={CHART_COLORS.info}
+                        strokeWidth={2.5}
+                        dot={{ r: 4, fill: CHART_COLORS.info }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-muted-foreground text-center pt-24 text-sm">Nessun tesseramento registrato</p>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Pie Charts Row */}
+      {!isAllenatore && (
+        <motion.div
+          className="grid gap-6 lg:grid-cols-2"
+          variants={container}
+          initial="hidden"
+          animate="show"
+        >
+          {/* Stato Abbonamenti */}
+          <motion.div variants={item}>
+            <Card className="glass-card">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CalendarCheck className="h-4 w-4 text-accent" />
+                  Stato Abbonamenti
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="h-[250px]">
+                {abbonamentoStatusData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={abbonamentoStatusData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={85}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {abbonamentoStatusData.map((_, i) => (
+                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-muted-foreground text-center pt-24 text-sm">Nessun abbonamento</p>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Stato Rate */}
+          <motion.div variants={item}>
+            <Card className="glass-card">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-primary" />
+                  Stato Rate Pagamento
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="h-[250px]">
+                {rateStatusData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={rateStatusData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={85}
+                        label={({ name, value }) => `${name}: ${value}`}
+                      >
+                        <Cell fill={CHART_COLORS.entrate} />
+                        <Cell fill={CHART_COLORS.uscite} />
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-muted-foreground text-center pt-24 text-sm">Nessuna rata</p>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Alerts & Recent Movements */}
       <div className="grid gap-6 lg:grid-cols-2">
         <motion.div variants={item} initial="hidden" animate="show">
           <Card className="glass-card">
