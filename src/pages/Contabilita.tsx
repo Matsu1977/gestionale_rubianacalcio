@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import type { Database } from "@/integrations/supabase/types";
 import { motion } from "framer-motion";
-import { Wallet, TrendingUp, TrendingDown, Scale, Plus, Trash2, Settings } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, Scale, Plus, Trash2, Settings, Filter } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ export default function Contabilita() {
   const [uscitaOpen, setUscitaOpen] = useState(false);
   const [entrataOpen, setEntrataOpen] = useState(false);
   const [categorieOpen, setCategorieOpen] = useState(false);
+  const [filtroCategoria, setFiltroCategoria] = useState<string>("tutte");
 
   const { data: movimenti = [], isLoading } = useQuery({
     queryKey: ["movimenti-all"],
@@ -46,6 +48,52 @@ export default function Contabilita() {
     },
   });
 
+  const { data: categorieEntrata = [] } = useQuery({
+    queryKey: ["categorie-spesa", "Entrata"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("categorie_spesa").select("nome").eq("tipo", "Entrata").order("nome");
+      if (error) throw error;
+      return data.map((c) => c.nome);
+    },
+  });
+
+  const { data: categorieUscita = [] } = useQuery({
+    queryKey: ["categorie-spesa", "Uscita"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("categorie_spesa").select("nome").eq("tipo", "Uscita").order("nome");
+      if (error) throw error;
+      return data.map((c) => c.nome);
+    },
+  });
+
+  const tutteCategorie = useMemo(() => {
+    const set = new Set<string>();
+    categorieEntrata.forEach((c) => set.add(c));
+    categorieUscita.forEach((c) => set.add(c));
+    // Also add the enum categories from movimenti
+    movimenti.forEach((m) => set.add(m.categoria));
+    // Extract categories from notes like "[Categoria] ..."
+    movimenti.forEach((m) => {
+      if (m.note) {
+        const match = m.note.match(/^\[(.+?)\]/);
+        if (match) set.add(match[1]);
+      }
+    });
+    return Array.from(set).sort();
+  }, [categorieEntrata, categorieUscita, movimenti]);
+
+  const getMovimentoCategoria = (m: Movimento): string => {
+    if (m.note) {
+      const match = m.note.match(/^\[(.+?)\]/);
+      if (match) return match[1];
+    }
+    return m.categoria;
+  };
+
+  const movimentiFiltrati = useMemo(() => {
+    if (filtroCategoria === "tutte") return movimenti;
+    return movimenti.filter((m) => getMovimentoCategoria(m) === filtroCategoria);
+  }, [movimenti, filtroCategoria]);
   const addUscitaMutation = useMutation({
     mutationFn: async (payload: {
       data: string;
@@ -114,8 +162,8 @@ export default function Contabilita() {
     onError: (e) => toast.error("Errore: " + e.message),
   });
 
-  const totaleEntrate = movimenti.filter((m) => m.tipo === "Entrata").reduce((s, m) => s + Number(m.importo), 0);
-  const totaleUscite = movimenti.filter((m) => m.tipo === "Uscita").reduce((s, m) => s + Number(m.importo), 0);
+  const totaleEntrate = movimentiFiltrati.filter((m) => m.tipo === "Entrata").reduce((s, m) => s + Number(m.importo), 0);
+  const totaleUscite = movimentiFiltrati.filter((m) => m.tipo === "Uscita").reduce((s, m) => s + Number(m.importo), 0);
   const saldo = totaleEntrate - totaleUscite;
 
   return (
@@ -179,15 +227,35 @@ export default function Contabilita() {
         </Card>
       </div>
 
+      <div className="flex items-center gap-3 flex-wrap">
+        <Filter className="h-4 w-4 text-muted-foreground" />
+        <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="Filtra per categoria" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="tutte">Tutte le categorie</SelectItem>
+            {tutteCategorie.map((c) => (
+              <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {filtroCategoria !== "tutte" && (
+          <Button variant="ghost" size="sm" onClick={() => setFiltroCategoria("tutte")}>
+            Rimuovi filtro
+          </Button>
+        )}
+      </div>
+
       <div className="rounded-lg border bg-card">
         {isLoading ? (
           <div className="flex items-center justify-center py-20 text-muted-foreground">Caricamento...</div>
-        ) : movimenti.length === 0 ? (
+        ) : movimentiFiltrati.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="p-4 rounded-2xl bg-primary/10 mb-4">
               <Wallet className="h-10 w-10 text-primary" />
             </div>
-            <p className="text-lg font-semibold">Nessun movimento registrato</p>
+            <p className="text-lg font-semibold">{filtroCategoria !== "tutte" ? "Nessun movimento per questa categoria" : "Nessun movimento registrato"}</p>
             <p className="text-sm text-muted-foreground mt-1">I movimenti appariranno qui quando verranno registrati pagamenti</p>
           </div>
         ) : (
@@ -205,7 +273,7 @@ export default function Contabilita() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {movimenti.map((m) => (
+              {movimentiFiltrati.map((m) => (
                 <TableRow key={m.id}>
                   <TableCell className="text-sm">{new Date(m.data).toLocaleDateString("it-IT")}</TableCell>
                   <TableCell>
@@ -216,7 +284,7 @@ export default function Contabilita() {
                   <TableCell className="text-sm">
                     {m.persona_id ? (personeMap[m.persona_id] || "—") : (m.riferimento || "—")}
                   </TableCell>
-                  <TableCell className="text-sm">{m.categoria}</TableCell>
+                  <TableCell className="text-sm">{getMovimentoCategoria(m)}</TableCell>
                   <TableCell className="hidden md:table-cell text-sm">{m.metodo_pagamento}</TableCell>
                   <TableCell className="hidden lg:table-cell text-sm text-muted-foreground max-w-[200px] truncate">{m.note || "—"}</TableCell>
                   <TableCell className={`text-right font-medium ${m.tipo === "Entrata" ? "text-green-600" : "text-red-600"}`}>
