@@ -48,6 +48,52 @@ export default function Contabilita() {
     },
   });
 
+  const { data: categorieEntrata = [] } = useQuery({
+    queryKey: ["categorie-spesa", "Entrata"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("categorie_spesa").select("nome").eq("tipo", "Entrata").order("nome");
+      if (error) throw error;
+      return data.map((c) => c.nome);
+    },
+  });
+
+  const { data: categorieUscita = [] } = useQuery({
+    queryKey: ["categorie-spesa", "Uscita"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("categorie_spesa").select("nome").eq("tipo", "Uscita").order("nome");
+      if (error) throw error;
+      return data.map((c) => c.nome);
+    },
+  });
+
+  const tutteCategorie = useMemo(() => {
+    const set = new Set<string>();
+    categorieEntrata.forEach((c) => set.add(c));
+    categorieUscita.forEach((c) => set.add(c));
+    // Also add the enum categories from movimenti
+    movimenti.forEach((m) => set.add(m.categoria));
+    // Extract categories from notes like "[Categoria] ..."
+    movimenti.forEach((m) => {
+      if (m.note) {
+        const match = m.note.match(/^\[(.+?)\]/);
+        if (match) set.add(match[1]);
+      }
+    });
+    return Array.from(set).sort();
+  }, [categorieEntrata, categorieUscita, movimenti]);
+
+  const getMovimentoCategoria = (m: Movimento): string => {
+    if (m.note) {
+      const match = m.note.match(/^\[(.+?)\]/);
+      if (match) return match[1];
+    }
+    return m.categoria;
+  };
+
+  const movimentiFiltrati = useMemo(() => {
+    if (filtroCategoria === "tutte") return movimenti;
+    return movimenti.filter((m) => getMovimentoCategoria(m) === filtroCategoria);
+  }, [movimenti, filtroCategoria]);
   const addUscitaMutation = useMutation({
     mutationFn: async (payload: {
       data: string;
