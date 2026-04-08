@@ -284,7 +284,7 @@ export default function Contabilita() {
                   <TableCell className="text-sm">
                     {m.persona_id ? (personeMap[m.persona_id] || "—") : (m.riferimento || "—")}
                   </TableCell>
-                  <TableCell className="text-sm">{m.categoria}</TableCell>
+                  <TableCell className="text-sm">{getMovimentoCategoria(m)}</TableCell>
                   <TableCell className="hidden md:table-cell text-sm">{m.metodo_pagamento}</TableCell>
                   <TableCell className="hidden lg:table-cell text-sm text-muted-foreground max-w-[200px] truncate">{m.note || "—"}</TableCell>
                   <TableCell className={`text-right font-medium ${m.tipo === "Entrata" ? "text-green-600" : "text-red-600"}`}>
