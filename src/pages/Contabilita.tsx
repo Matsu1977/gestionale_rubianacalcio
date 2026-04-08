@@ -162,8 +162,8 @@ export default function Contabilita() {
     onError: (e) => toast.error("Errore: " + e.message),
   });
 
-  const totaleEntrate = movimenti.filter((m) => m.tipo === "Entrata").reduce((s, m) => s + Number(m.importo), 0);
-  const totaleUscite = movimenti.filter((m) => m.tipo === "Uscita").reduce((s, m) => s + Number(m.importo), 0);
+  const totaleEntrate = movimentiFiltrati.filter((m) => m.tipo === "Entrata").reduce((s, m) => s + Number(m.importo), 0);
+  const totaleUscite = movimentiFiltrati.filter((m) => m.tipo === "Uscita").reduce((s, m) => s + Number(m.importo), 0);
   const saldo = totaleEntrate - totaleUscite;
 
   return (
