@@ -23,6 +23,7 @@ export default function Contabilita() {
   const [uscitaOpen, setUscitaOpen] = useState(false);
   const [entrataOpen, setEntrataOpen] = useState(false);
   const [categorieOpen, setCategorieOpen] = useState(false);
+  const [filtroCategoria, setFiltroCategoria] = useState<string>("tutte");
 
   const { data: movimenti = [], isLoading } = useQuery({
     queryKey: ["movimenti-all"],
