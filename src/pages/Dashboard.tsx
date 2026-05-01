@@ -89,12 +89,23 @@ export default function Dashboard() {
     },
   });
 
+  // Storico rate (mantenute solo per consultazione, non più per alert insoluti)
   const { data: rate } = useQuery({
     queryKey: ["rate-dashboard"],
     queryFn: async () => {
       const { data } = await supabase.from("rate").select("*");
       return data || [];
     },
+  });
+
+  // Tessere ingressi - per alert
+  const { data: tessere } = useQuery({
+    queryKey: ["tessere-dashboard"],
+    queryFn: async () => {
+      const { data } = await supabase.from("tessere_ingressi").select("*");
+      return data || [];
+    },
+    enabled: !isAllenatore,
   });
 
   const { data: movimenti } = useQuery({
