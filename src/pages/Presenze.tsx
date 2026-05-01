@@ -350,23 +350,51 @@ export default function Presenze() {
                     <TableHead className="w-[50px]">#</TableHead>
                     <TableHead>Atleta</TableHead>
                     <TableHead className="w-[100px] text-center">Presente</TableHead>
+                    <TableHead className="w-[180px] text-center">Tessera Ingressi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {atleti.map((a: any, i: number) => (
-                    <TableRow key={a.id}>
-                      <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-                      <TableCell className="font-medium">{a.cognome} {a.nome}</TableCell>
-                      <TableCell className="text-center">
-                        <Checkbox
-                          checked={presenzeMap[a.id] ?? false}
-                          onCheckedChange={(checked) =>
-                            togglePresenzaMutation.mutate({ personaId: a.id, presente: !!checked })
-                          }
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {atleti.map((a: any, i: number) => {
+                    const tessera = tesseraByPersona[a.id];
+                    const rimasti = tessera ? tessera.ingressi_totali - tessera.ingressi_usati : 0;
+                    return (
+                      <TableRow key={a.id}>
+                        <TableCell className="text-muted-foreground">{i + 1}</TableCell>
+                        <TableCell className="font-medium">{a.cognome} {a.nome}</TableCell>
+                        <TableCell className="text-center">
+                          <Checkbox
+                            checked={presenzeMap[a.id] ?? false}
+                            onCheckedChange={(checked) =>
+                              togglePresenzaMutation.mutate({ personaId: a.id, presente: !!checked })
+                            }
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {tessera ? (
+                            <div className="flex items-center justify-center gap-2">
+                              <Badge variant={rimasti <= 2 ? "destructive" : "outline"}>
+                                <Ticket className="h-3 w-3 mr-1" />{rimasti}/{tessera.ingressi_totali}
+                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={scalaIngressoMutation.isPending}
+                                onClick={() => {
+                                  if (confirm(`Scalare 1 ingresso dalla tessera di ${a.cognome} ${a.nome}? (rimasti: ${rimasti})`)) {
+                                    scalaIngressoMutation.mutate({ tesseraId: tessera.id, personaId: a.id });
+                                  }
+                                }}
+                              >
+                                –1
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
