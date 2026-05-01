@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { format, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
 import {
-  ClipboardCheck, Calendar as CalendarIcon, Users, Check, X, Loader2, BarChart3, Plus,
+  ClipboardCheck, Calendar as CalendarIcon, Users, Check, X, Loader2, BarChart3, Plus, Ticket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
