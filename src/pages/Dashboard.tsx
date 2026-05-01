@@ -255,11 +255,22 @@ export default function Dashboard() {
     (t) => t.data_fine && t.data_fine <= in30Str && t.stato === "Attivo"
   ).length;
 
+  // Tessere ingressi - alerts
+  const tessereEsaurimento = (tessere || []).filter((t: any) => {
+    const r = t.ingressi_totali - t.ingressi_usati;
+    return r > 0 && r <= 2;
+  }).length;
+  const tessereEsaurite = (tessere || []).filter((t: any) => t.ingressi_totali - t.ingressi_usati <= 0).length;
+
   const alerts: { text: string; type: string; icon: typeof AlertCircle }[] = [];
   if (certScaduti > 0) alerts.push({ text: `${certScaduti} certificati medici scaduti`, type: "destructive", icon: AlertCircle });
   if (certScadenza > 0) alerts.push({ text: `${certScadenza} certificati medici in scadenza (30gg)`, type: "warning", icon: AlertCircle });
-  if (rateScadute > 0) alerts.push({ text: `${rateScadute} rate abbonamento scadute`, type: "destructive", icon: Clock });
-  if (tessRinnovo > 0) alerts.push({ text: `${tessRinnovo} tesseramenti da rinnovare`, type: "warning", icon: IdCard });
+  // Avvisi abbonamenti/tesseramenti SOLO durante la stagione attiva (1 ott - 30 giu)
+  if (stagioneAttiva && tessRinnovo > 0) alerts.push({ text: `${tessRinnovo} tesseramenti da rinnovare`, type: "warning", icon: IdCard });
+  if (stagioneAttiva && tessereEsaurimento > 0) alerts.push({ text: `${tessereEsaurimento} tessere ingressi in esaurimento`, type: "warning", icon: AlertCircle });
+  if (stagioneAttiva && tessereEsaurite > 0) alerts.push({ text: `${tessereEsaurite} tessere ingressi da rinnovare`, type: "destructive", icon: AlertCircle });
+  if (!stagioneAttiva) alerts.push({ text: "Stagione sospesa: avvisi di scadenza disattivati fino al 1° ottobre", type: "warning", icon: Clock });
+  // Le rate non sono più considerate insoluti automatici - rimosse dagli alert
 
   const recentMovements = (movimenti || []).map((m) => ({
     desc: m.persona_id && personeMap ? `${m.categoria} - ${personeMap[m.persona_id] || ""}` : m.riferimento ? `${m.note || m.categoria} - ${m.riferimento}` : m.note || m.categoria,
