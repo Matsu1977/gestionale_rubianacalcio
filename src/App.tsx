@@ -77,6 +77,7 @@ function ProtectedRoutes() {
         {hasFullAccess && <Route path="/contabilita" element={<Contabilita />} />}
         {hasFullAccess && <Route path="/report" element={<Report />} />}
         <Route path="/presenze" element={<Presenze />} />
+        {hasFullAccess && <Route path="/tessere-ingressi" element={<TessereIngressi />} />}
         {isAdmin && <Route path="/impostazioni" element={<Impostazioni />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
