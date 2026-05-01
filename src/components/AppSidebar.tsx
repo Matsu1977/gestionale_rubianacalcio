@@ -43,6 +43,7 @@ const allMenuItems = [
   { title: "Comunicazioni", url: "/comunicazioni", icon: MessageSquare, roles: ["admin", "segreteria", "allenatore"] },
   { title: "Report", url: "/report", icon: BarChart3, roles: ["admin", "segreteria"] },
   { title: "Presenze", url: "/presenze", icon: ClipboardCheck, roles: ["admin", "segreteria", "allenatore"] },
+  { title: "Tessere Ingressi", url: "/tessere-ingressi", icon: Ticket, roles: ["admin", "segreteria"] },
   { title: "Impostazioni", url: "/impostazioni", icon: Settings, roles: ["admin"] },
 ];
 
