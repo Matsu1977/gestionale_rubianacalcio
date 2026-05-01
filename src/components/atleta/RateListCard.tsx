@@ -106,7 +106,7 @@ export function RateListCard({ rate, abbonamento, pagamentoOnlineAttivo = false 
                   </Badge>
                 </div>
 
-                {!isPaid && (
+                {!isPaid && pagamentoOnlineAttivo && (
                   <Button
                     size="sm"
                     onClick={() => handlePayOnline(rata.id)}
