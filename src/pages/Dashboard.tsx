@@ -62,6 +62,8 @@ const fmt = (n: number) =>
 export default function Dashboard() {
   const { role } = useAuth();
   const isAllenatore = role === "allenatore";
+  const isAdmin = role === "admin";
+  const stagioneAttiva = isStagioneAttiva();
 
   const { data: persone } = useQuery({
     queryKey: ["persone-count"],
