@@ -180,16 +180,7 @@ export default function Dashboard() {
     return Object.entries(map).map(([name, value]) => ({ name, value }));
   }, [abbonamenti]);
 
-  // Chart data: Rate pagate vs non pagate
-  const rateStatusData = useMemo(() => {
-    if (!rate || rate.length === 0) return [];
-    const pagate = rate.filter((r) => r.stato === "Pagata").length;
-    const nonPagate = rate.filter((r) => r.stato !== "Pagata").length;
-    return [
-      { name: "Pagate", value: pagate },
-      { name: "Da pagare", value: nonPagate },
-    ].filter((d) => d.value > 0);
-  }, [rate]);
+  // (rimosso "Stato Rate Pagamento": le rate non rappresentano più scadenze obbligatorie)
 
   // Chart data: Nuove iscrizioni per mese (ultimi 6 mesi)
   const iscrizioni = useMemo(() => {
