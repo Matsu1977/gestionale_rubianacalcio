@@ -332,7 +332,7 @@ export default function AtletaDashboard() {
         <motion.div variants={item} initial="hidden" animate="show" className="space-y-4">
           <h2 className="text-xl font-semibold">Le mie Rate</h2>
           {rateByAbbonamento.map(({ abbonamento, rate }) => (
-            <RateListCard key={abbonamento.id} rate={rate} abbonamento={abbonamento} />
+            <RateListCard key={abbonamento.id} rate={rate} abbonamento={abbonamento} pagamentoOnlineAttivo={pagamentoOnlineAttivo} />
           ))}
         </motion.div>
       )}
