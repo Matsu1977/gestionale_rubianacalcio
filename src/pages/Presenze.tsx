@@ -188,6 +188,61 @@ export default function Presenze() {
     onError: (err: any) => toast.error(err.message),
   });
 
+  // Tessere ingressi attive per il corso selezionato
+  const { data: tessereCorso = [] } = useQuery({
+    queryKey: ["tessere-corso", selectedCorso],
+    queryFn: async () => {
+      if (!selectedCorso) return [];
+      const { data } = await supabase
+        .from("tessere_ingressi")
+        .select("*")
+        .eq("corso", selectedCorso);
+      return data || [];
+    },
+    enabled: !!selectedCorso,
+  });
+
+  // Map persona_id -> tessera (la più recente con ingressi rimanenti)
+  const tesseraByPersona = useMemo(() => {
+    const map: Record<string, any> = {};
+    [...tessereCorso]
+      .sort((a: any, b: any) => (a.created_at < b.created_at ? 1 : -1))
+      .forEach((t: any) => {
+        if (!map[t.persona_id] && t.ingressi_totali - t.ingressi_usati > 0) {
+          map[t.persona_id] = t;
+        }
+      });
+    return map;
+  }, [tessereCorso]);
+
+  const scalaIngressoMutation = useMutation({
+    mutationFn: async ({ tesseraId, personaId }: { tesseraId: string; personaId: string }) => {
+      const tessera = tessereCorso.find((t: any) => t.id === tesseraId);
+      if (!tessera) throw new Error("Tessera non trovata");
+      if (tessera.ingressi_usati >= tessera.ingressi_totali) throw new Error("Ingressi esauriti");
+
+      const { error: updErr } = await supabase
+        .from("tessere_ingressi")
+        .update({ ingressi_usati: tessera.ingressi_usati + 1 })
+        .eq("id", tesseraId);
+      if (updErr) throw updErr;
+
+      await supabase.from("consumo_ingressi").insert({
+        tessera_id: tesseraId,
+        presenza_id: sessione?.id ?? null,
+        data_consumo: dateStr,
+        note: `Presenza ${selectedCorso} ${dateStr}`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tessere-corso", selectedCorso] });
+      queryClient.invalidateQueries({ queryKey: ["tessere-ingressi"] });
+      queryClient.invalidateQueries({ queryKey: ["tessere-dashboard"] });
+      toast.success("Ingresso scalato");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const presenzeMap = useMemo(() => {
     const map: Record<string, boolean> = {};
     presenze.forEach((p: any) => { map[p.persona_id] = p.presente; });
