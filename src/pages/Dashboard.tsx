@@ -422,36 +422,42 @@ export default function Dashboard() {
             </Card>
           </motion.div>
 
-          {/* Stato Rate */}
+          {/* Tessere Ingressi - panoramica */}
           <motion.div variants={item}>
             <Card className="glass-card">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Wallet className="h-4 w-4 text-primary" />
-                  Stato Rate Pagamento
+                  <Ticket className="h-4 w-4 text-primary" />
+                  Tessere Ingressi
                 </CardTitle>
               </CardHeader>
-              <CardContent className="h-[250px]">
-                {rateStatusData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={rateStatusData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={85}
-                        label={({ name, value }) => `${name}: ${value}`}
-                      >
-                        <Cell fill={CHART_COLORS.entrate} />
-                        <Cell fill={CHART_COLORS.uscite} />
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+              <CardContent className="h-[250px] flex flex-col justify-center gap-3">
+                {(tessere || []).length === 0 ? (
+                  <p className="text-muted-foreground text-center text-sm">Nessuna tessera attiva</p>
                 ) : (
-                  <p className="text-muted-foreground text-center pt-24 text-sm">Nessuna rata</p>
+                  <>
+                    <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                      <span className="text-sm">Tessere attive</span>
+                      <span className="text-2xl font-bold">
+                        {(tessere || []).filter((t: any) => t.ingressi_totali - t.ingressi_usati > 0).length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 rounded-lg bg-amber-500/10">
+                      <span className="text-sm">In esaurimento (≤2)</span>
+                      <span className="text-2xl font-bold text-amber-700">
+                        {(tessere || []).filter((t: any) => {
+                          const r = t.ingressi_totali - t.ingressi_usati;
+                          return r > 0 && r <= 2;
+                        }).length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 rounded-lg bg-destructive/10">
+                      <span className="text-sm">Esaurite</span>
+                      <span className="text-2xl font-bold text-destructive">
+                        {(tessere || []).filter((t: any) => t.ingressi_totali - t.ingressi_usati <= 0).length}
+                      </span>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
