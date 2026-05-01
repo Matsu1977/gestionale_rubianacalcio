@@ -13,6 +13,7 @@ import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { usePagamentoOnline } from "@/hooks/usePagamentoOnline";
 
 const container = {
   hidden: { opacity: 0 },
