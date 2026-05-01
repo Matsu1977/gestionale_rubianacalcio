@@ -27,6 +27,7 @@ const item = {
 export default function AtletaDashboard() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { attivo: pagamentoOnlineAttivo } = usePagamentoOnline();
 
   // Handle payment result from Stripe redirect
   useEffect(() => {
