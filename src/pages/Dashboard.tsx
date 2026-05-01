@@ -21,6 +21,9 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend,
 } from "recharts";
+import { isStagioneAttiva, stagioneStatoMessage } from "@/lib/stagione";
+import { PagamentoOnlineSwitchCard } from "@/components/dashboard/PagamentoOnlineSwitchCard";
+import { Ticket } from "lucide-react";
 
 const container = {
   hidden: { opacity: 0 },
