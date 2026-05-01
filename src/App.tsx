@@ -15,6 +15,7 @@ import Contabilita from "./pages/Contabilita";
 import Comunicazioni from "./pages/Comunicazioni";
 import Report from "./pages/Report";
 import Presenze from "./pages/Presenze";
+import TessereIngressi from "./pages/TessereIngressi";
 import Impostazioni from "./pages/Impostazioni";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
@@ -76,6 +77,7 @@ function ProtectedRoutes() {
         {hasFullAccess && <Route path="/contabilita" element={<Contabilita />} />}
         {hasFullAccess && <Route path="/report" element={<Report />} />}
         <Route path="/presenze" element={<Presenze />} />
+        {hasFullAccess && <Route path="/tessere-ingressi" element={<TessereIngressi />} />}
         {isAdmin && <Route path="/impostazioni" element={<Impostazioni />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

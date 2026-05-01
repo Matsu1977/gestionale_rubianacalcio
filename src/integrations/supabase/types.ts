@@ -145,6 +145,41 @@ export type Database = {
           },
         ]
       }
+      consumo_ingressi: {
+        Row: {
+          created_at: string
+          data_consumo: string
+          id: string
+          note: string | null
+          presenza_id: string | null
+          tessera_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_consumo?: string
+          id?: string
+          note?: string | null
+          presenza_id?: string | null
+          tessera_id: string
+        }
+        Update: {
+          created_at?: string
+          data_consumo?: string
+          id?: string
+          note?: string | null
+          presenza_id?: string | null
+          tessera_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consumo_ingressi_tessera_id_fkey"
+            columns: ["tessera_id"]
+            isOneToOne: false
+            referencedRelation: "tessere_ingressi"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       corsi: {
         Row: {
           attivo: boolean
@@ -627,6 +662,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tessere_ingressi: {
+        Row: {
+          corso: string
+          created_at: string
+          data_acquisto: string
+          id: string
+          importo: number
+          ingressi_totali: number
+          ingressi_usati: number
+          note: string | null
+          persona_id: string
+          stato_pagamento: string
+          updated_at: string
+        }
+        Insert: {
+          corso: string
+          created_at?: string
+          data_acquisto?: string
+          id?: string
+          importo?: number
+          ingressi_totali?: number
+          ingressi_usati?: number
+          note?: string | null
+          persona_id: string
+          stato_pagamento?: string
+          updated_at?: string
+        }
+        Update: {
+          corso?: string
+          created_at?: string
+          data_acquisto?: string
+          id?: string
+          importo?: number
+          ingressi_totali?: number
+          ingressi_usati?: number
+          note?: string | null
+          persona_id?: string
+          stato_pagamento?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

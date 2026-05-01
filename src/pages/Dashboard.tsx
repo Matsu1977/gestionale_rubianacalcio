@@ -21,6 +21,9 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend,
 } from "recharts";
+import { isStagioneAttiva, stagioneStatoMessage } from "@/lib/stagione";
+import { PagamentoOnlineSwitchCard } from "@/components/dashboard/PagamentoOnlineSwitchCard";
+import { Ticket } from "lucide-react";
 
 const container = {
   hidden: { opacity: 0 },
@@ -59,6 +62,8 @@ const fmt = (n: number) =>
 export default function Dashboard() {
   const { role } = useAuth();
   const isAllenatore = role === "allenatore";
+  const isAdmin = role === "admin";
+  const stagioneAttiva = isStagioneAttiva();
 
   const { data: persone } = useQuery({
     queryKey: ["persone-count"],
@@ -84,12 +89,23 @@ export default function Dashboard() {
     },
   });
 
+  // Storico rate (mantenute solo per consultazione, non più per alert insoluti)
   const { data: rate } = useQuery({
     queryKey: ["rate-dashboard"],
     queryFn: async () => {
       const { data } = await supabase.from("rate").select("*");
       return data || [];
     },
+  });
+
+  // Tessere ingressi - per alert
+  const { data: tessere } = useQuery({
+    queryKey: ["tessere-dashboard"],
+    queryFn: async () => {
+      const { data } = await supabase.from("tessere_ingressi").select("*");
+      return data || [];
+    },
+    enabled: !isAllenatore,
   });
 
   const { data: movimenti } = useQuery({
@@ -164,16 +180,7 @@ export default function Dashboard() {
     return Object.entries(map).map(([name, value]) => ({ name, value }));
   }, [abbonamenti]);
 
-  // Chart data: Rate pagate vs non pagate
-  const rateStatusData = useMemo(() => {
-    if (!rate || rate.length === 0) return [];
-    const pagate = rate.filter((r) => r.stato === "Pagata").length;
-    const nonPagate = rate.filter((r) => r.stato !== "Pagata").length;
-    return [
-      { name: "Pagate", value: pagate },
-      { name: "Da pagare", value: nonPagate },
-    ].filter((d) => d.value > 0);
-  }, [rate]);
+  // (rimosso "Stato Rate Pagamento": le rate non rappresentano più scadenze obbligatorie)
 
   // Chart data: Nuove iscrizioni per mese (ultimi 6 mesi)
   const iscrizioni = useMemo(() => {
@@ -248,11 +255,22 @@ export default function Dashboard() {
     (t) => t.data_fine && t.data_fine <= in30Str && t.stato === "Attivo"
   ).length;
 
+  // Tessere ingressi - alerts
+  const tessereEsaurimento = (tessere || []).filter((t: any) => {
+    const r = t.ingressi_totali - t.ingressi_usati;
+    return r > 0 && r <= 2;
+  }).length;
+  const tessereEsaurite = (tessere || []).filter((t: any) => t.ingressi_totali - t.ingressi_usati <= 0).length;
+
   const alerts: { text: string; type: string; icon: typeof AlertCircle }[] = [];
   if (certScaduti > 0) alerts.push({ text: `${certScaduti} certificati medici scaduti`, type: "destructive", icon: AlertCircle });
   if (certScadenza > 0) alerts.push({ text: `${certScadenza} certificati medici in scadenza (30gg)`, type: "warning", icon: AlertCircle });
-  if (rateScadute > 0) alerts.push({ text: `${rateScadute} rate abbonamento scadute`, type: "destructive", icon: Clock });
-  if (tessRinnovo > 0) alerts.push({ text: `${tessRinnovo} tesseramenti da rinnovare`, type: "warning", icon: IdCard });
+  // Avvisi abbonamenti/tesseramenti SOLO durante la stagione attiva (1 ott - 30 giu)
+  if (stagioneAttiva && tessRinnovo > 0) alerts.push({ text: `${tessRinnovo} tesseramenti da rinnovare`, type: "warning", icon: IdCard });
+  if (stagioneAttiva && tessereEsaurimento > 0) alerts.push({ text: `${tessereEsaurimento} tessere ingressi in esaurimento`, type: "warning", icon: AlertCircle });
+  if (stagioneAttiva && tessereEsaurite > 0) alerts.push({ text: `${tessereEsaurite} tessere ingressi da rinnovare`, type: "destructive", icon: AlertCircle });
+  if (!stagioneAttiva) alerts.push({ text: "Stagione sospesa: avvisi di scadenza disattivati fino al 1° ottobre", type: "warning", icon: Clock });
+  // Le rate non sono più considerate insoluti automatici - rimosse dagli alert
 
   const recentMovements = (movimenti || []).map((m) => ({
     desc: m.persona_id && personeMap ? `${m.categoria} - ${personeMap[m.persona_id] || ""}` : m.riferimento ? `${m.note || m.categoria} - ${m.riferimento}` : m.note || m.categoria,
@@ -271,6 +289,14 @@ export default function Dashboard() {
         </div>
         {isAllenatore && <ChangePasswordDialog />}
       </div>
+
+      {!stagioneAttiva && !isAllenatore && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">
+          <strong>Stagione sospesa</strong> — {stagioneStatoMessage()}. Da luglio a settembre i corsi sono sospesi: nessuna scadenza o avviso automatico viene generato.
+        </div>
+      )}
+
+      {isAdmin && <PagamentoOnlineSwitchCard />}
 
       {/* Stats Cards */}
       <motion.div
@@ -415,36 +441,42 @@ export default function Dashboard() {
             </Card>
           </motion.div>
 
-          {/* Stato Rate */}
+          {/* Tessere Ingressi - panoramica */}
           <motion.div variants={item}>
             <Card className="glass-card">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Wallet className="h-4 w-4 text-primary" />
-                  Stato Rate Pagamento
+                  <Ticket className="h-4 w-4 text-primary" />
+                  Tessere Ingressi
                 </CardTitle>
               </CardHeader>
-              <CardContent className="h-[250px]">
-                {rateStatusData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={rateStatusData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={85}
-                        label={({ name, value }) => `${name}: ${value}`}
-                      >
-                        <Cell fill={CHART_COLORS.entrate} />
-                        <Cell fill={CHART_COLORS.uscite} />
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+              <CardContent className="h-[250px] flex flex-col justify-center gap-3">
+                {(tessere || []).length === 0 ? (
+                  <p className="text-muted-foreground text-center text-sm">Nessuna tessera attiva</p>
                 ) : (
-                  <p className="text-muted-foreground text-center pt-24 text-sm">Nessuna rata</p>
+                  <>
+                    <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                      <span className="text-sm">Tessere attive</span>
+                      <span className="text-2xl font-bold">
+                        {(tessere || []).filter((t: any) => t.ingressi_totali - t.ingressi_usati > 0).length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 rounded-lg bg-amber-500/10">
+                      <span className="text-sm">In esaurimento (≤2)</span>
+                      <span className="text-2xl font-bold text-amber-700">
+                        {(tessere || []).filter((t: any) => {
+                          const r = t.ingressi_totali - t.ingressi_usati;
+                          return r > 0 && r <= 2;
+                        }).length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 rounded-lg bg-destructive/10">
+                      <span className="text-sm">Esaurite</span>
+                      <span className="text-2xl font-bold text-destructive">
+                        {(tessere || []).filter((t: any) => t.ingressi_totali - t.ingressi_usati <= 0).length}
+                      </span>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>

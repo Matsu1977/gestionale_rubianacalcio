@@ -13,6 +13,7 @@ import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { usePagamentoOnline } from "@/hooks/usePagamentoOnline";
 
 const container = {
   hidden: { opacity: 0 },
@@ -26,6 +27,7 @@ const item = {
 export default function AtletaDashboard() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { attivo: pagamentoOnlineAttivo } = usePagamentoOnline();
 
   // Handle payment result from Stripe redirect
   useEffect(() => {
@@ -175,7 +177,7 @@ export default function AtletaDashboard() {
     },
   });
 
-  const hasPaymentInfo = paymentInfo && (paymentInfo.pagamento_iban || paymentInfo.pagamento_intestatario || paymentInfo.pagamento_paypal_link || paymentInfo.pagamento_satispay_link);
+  const hasPaymentInfo = paymentInfo && pagamentoOnlineAttivo && (paymentInfo.pagamento_iban || paymentInfo.pagamento_intestatario || paymentInfo.pagamento_paypal_link || paymentInfo.pagamento_satispay_link);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -330,7 +332,7 @@ export default function AtletaDashboard() {
         <motion.div variants={item} initial="hidden" animate="show" className="space-y-4">
           <h2 className="text-xl font-semibold">Le mie Rate</h2>
           {rateByAbbonamento.map(({ abbonamento, rate }) => (
-            <RateListCard key={abbonamento.id} rate={rate} abbonamento={abbonamento} />
+            <RateListCard key={abbonamento.id} rate={rate} abbonamento={abbonamento} pagamentoOnlineAttivo={pagamentoOnlineAttivo} />
           ))}
         </motion.div>
       )}

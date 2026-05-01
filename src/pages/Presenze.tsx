@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { format, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
 import {
-  ClipboardCheck, Calendar as CalendarIcon, Users, Check, X, Loader2, BarChart3, Plus,
+  ClipboardCheck, Calendar as CalendarIcon, Users, Check, X, Loader2, BarChart3, Plus, Ticket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -188,6 +188,61 @@ export default function Presenze() {
     onError: (err: any) => toast.error(err.message),
   });
 
+  // Tessere ingressi attive per il corso selezionato
+  const { data: tessereCorso = [] } = useQuery({
+    queryKey: ["tessere-corso", selectedCorso],
+    queryFn: async () => {
+      if (!selectedCorso) return [];
+      const { data } = await supabase
+        .from("tessere_ingressi")
+        .select("*")
+        .eq("corso", selectedCorso);
+      return data || [];
+    },
+    enabled: !!selectedCorso,
+  });
+
+  // Map persona_id -> tessera (la più recente con ingressi rimanenti)
+  const tesseraByPersona = useMemo(() => {
+    const map: Record<string, any> = {};
+    [...tessereCorso]
+      .sort((a: any, b: any) => (a.created_at < b.created_at ? 1 : -1))
+      .forEach((t: any) => {
+        if (!map[t.persona_id] && t.ingressi_totali - t.ingressi_usati > 0) {
+          map[t.persona_id] = t;
+        }
+      });
+    return map;
+  }, [tessereCorso]);
+
+  const scalaIngressoMutation = useMutation({
+    mutationFn: async ({ tesseraId, personaId }: { tesseraId: string; personaId: string }) => {
+      const tessera = tessereCorso.find((t: any) => t.id === tesseraId);
+      if (!tessera) throw new Error("Tessera non trovata");
+      if (tessera.ingressi_usati >= tessera.ingressi_totali) throw new Error("Ingressi esauriti");
+
+      const { error: updErr } = await supabase
+        .from("tessere_ingressi")
+        .update({ ingressi_usati: tessera.ingressi_usati + 1 })
+        .eq("id", tesseraId);
+      if (updErr) throw updErr;
+
+      await supabase.from("consumo_ingressi").insert({
+        tessera_id: tesseraId,
+        presenza_id: sessione?.id ?? null,
+        data_consumo: dateStr,
+        note: `Presenza ${selectedCorso} ${dateStr}`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tessere-corso", selectedCorso] });
+      queryClient.invalidateQueries({ queryKey: ["tessere-ingressi"] });
+      queryClient.invalidateQueries({ queryKey: ["tessere-dashboard"] });
+      toast.success("Ingresso scalato");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const presenzeMap = useMemo(() => {
     const map: Record<string, boolean> = {};
     presenze.forEach((p: any) => { map[p.persona_id] = p.presente; });
@@ -295,23 +350,51 @@ export default function Presenze() {
                     <TableHead className="w-[50px]">#</TableHead>
                     <TableHead>Atleta</TableHead>
                     <TableHead className="w-[100px] text-center">Presente</TableHead>
+                    <TableHead className="w-[180px] text-center">Tessera Ingressi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {atleti.map((a: any, i: number) => (
-                    <TableRow key={a.id}>
-                      <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-                      <TableCell className="font-medium">{a.cognome} {a.nome}</TableCell>
-                      <TableCell className="text-center">
-                        <Checkbox
-                          checked={presenzeMap[a.id] ?? false}
-                          onCheckedChange={(checked) =>
-                            togglePresenzaMutation.mutate({ personaId: a.id, presente: !!checked })
-                          }
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {atleti.map((a: any, i: number) => {
+                    const tessera = tesseraByPersona[a.id];
+                    const rimasti = tessera ? tessera.ingressi_totali - tessera.ingressi_usati : 0;
+                    return (
+                      <TableRow key={a.id}>
+                        <TableCell className="text-muted-foreground">{i + 1}</TableCell>
+                        <TableCell className="font-medium">{a.cognome} {a.nome}</TableCell>
+                        <TableCell className="text-center">
+                          <Checkbox
+                            checked={presenzeMap[a.id] ?? false}
+                            onCheckedChange={(checked) =>
+                              togglePresenzaMutation.mutate({ personaId: a.id, presente: !!checked })
+                            }
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {tessera ? (
+                            <div className="flex items-center justify-center gap-2">
+                              <Badge variant={rimasti <= 2 ? "destructive" : "outline"}>
+                                <Ticket className="h-3 w-3 mr-1" />{rimasti}/{tessera.ingressi_totali}
+                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={scalaIngressoMutation.isPending}
+                                onClick={() => {
+                                  if (confirm(`Scalare 1 ingresso dalla tessera di ${a.cognome} ${a.nome}? (rimasti: ${rimasti})`)) {
+                                    scalaIngressoMutation.mutate({ tesseraId: tessera.id, personaId: a.id });
+                                  }
+                                }}
+                              >
+                                –1
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}

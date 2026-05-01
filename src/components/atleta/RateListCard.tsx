@@ -25,9 +25,10 @@ interface Abbonamento {
 interface RateListCardProps {
   rate: Rata[];
   abbonamento: Abbonamento;
+  pagamentoOnlineAttivo?: boolean;
 }
 
-export function RateListCard({ rate, abbonamento }: RateListCardProps) {
+export function RateListCard({ rate, abbonamento, pagamentoOnlineAttivo = false }: RateListCardProps) {
   const [loadingRataId, setLoadingRataId] = useState<string | null>(null);
 
   const handlePayOnline = async (rataId: string) => {
@@ -105,7 +106,7 @@ export function RateListCard({ rate, abbonamento }: RateListCardProps) {
                   </Badge>
                 </div>
 
-                {!isPaid && (
+                {!isPaid && pagamentoOnlineAttivo && (
                   <Button
                     size="sm"
                     onClick={() => handlePayOnline(rata.id)}
