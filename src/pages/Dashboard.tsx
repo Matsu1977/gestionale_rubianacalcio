@@ -290,6 +290,14 @@ export default function Dashboard() {
         {isAllenatore && <ChangePasswordDialog />}
       </div>
 
+      {!stagioneAttiva && !isAllenatore && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">
+          <strong>Stagione sospesa</strong> — {stagioneStatoMessage()}. Da luglio a settembre i corsi sono sospesi: nessuna scadenza o avviso automatico viene generato.
+        </div>
+      )}
+
+      {isAdmin && <PagamentoOnlineSwitchCard />}
+
       {/* Stats Cards */}
       <motion.div
         className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
