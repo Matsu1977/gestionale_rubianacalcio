@@ -71,14 +71,14 @@ export default function Abbonamenti() {
     },
   });
 
-  // Get movimenti linked to abbonamenti for payment status
+  // Get movimenti linked to abbonamenti for payment status (per riferimento_tipo)
   const { data: movimentiAbb = [] } = useQuery({
     queryKey: ["movimenti-abbonamenti"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("movimenti")
         .select("riferimento_id, importo")
-        .eq("categoria", "Abbonamento")
+        .eq("riferimento_tipo", "abbonamento")
         .eq("tipo", "Entrata");
       if (error) throw error;
       return data;
