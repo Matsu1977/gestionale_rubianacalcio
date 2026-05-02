@@ -71,14 +71,14 @@ export default function Abbonamenti() {
     },
   });
 
-  // Get movimenti linked to abbonamenti for payment status
+  // Get movimenti linked to abbonamenti for payment status (per riferimento_tipo)
   const { data: movimentiAbb = [] } = useQuery({
     queryKey: ["movimenti-abbonamenti"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("movimenti")
         .select("riferimento_id, importo")
-        .eq("categoria", "Abbonamento")
+        .eq("riferimento_tipo", "abbonamento")
         .eq("tipo", "Entrata");
       if (error) throw error;
       return data;
@@ -197,6 +197,7 @@ export default function Abbonamenti() {
                 <TableHead>Stagione</TableHead>
                 <TableHead>Frequenza</TableHead>
                 <TableHead>Prossima Scadenza</TableHead>
+                <TableHead>Stato</TableHead>
                 <TableHead className="text-right">Pagato / Totale</TableHead>
                 <TableHead className="w-[100px]">Azioni</TableHead>
               </TableRow>
@@ -204,6 +205,12 @@ export default function Abbonamenti() {
             <TableBody>
               {filtered.map((a) => {
                 const pagato = pagatoPerAbb[a.id] || 0;
+                const totale = Number(a.importo_totale);
+                const statoDerivato = pagato >= totale && totale > 0
+                  ? "Pagato"
+                  : pagato > 0
+                  ? "Parziale"
+                  : "Non pagato";
                 const scadenza = getProssimaScadenza(a.data_inizio, a.tipo_pagamento);
                 const isScaduto = isBefore(scadenza, today);
                 const isInScadenza = !isScaduto && isBefore(scadenza, addDays(today, 7));
@@ -218,8 +225,13 @@ export default function Abbonamenti() {
                         {format(scadenza, "dd/MM/yyyy")}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={STATO_COLORS[statoDerivato]}>
+                        {statoDerivato}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right font-medium">
-                      €{pagato.toFixed(2)} / €{Number(a.importo_totale).toFixed(2)}
+                      €{pagato.toFixed(2)} / €{totale.toFixed(2)}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">

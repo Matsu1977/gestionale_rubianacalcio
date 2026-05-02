@@ -129,7 +129,10 @@ export default function Contabilita() {
       categoria_entrata: string;
       descrizione: string;
       metodo_pagamento: MetodoPag;
-      persona: string | null;
+      persona_id: string | null;
+      persona_label: string | null;
+      riferimento_tipo: string | null;
+      riferimento_id: string | null;
     }) => {
       const { error } = await supabase.from("movimenti").insert({
         data: payload.data,
@@ -137,7 +140,10 @@ export default function Contabilita() {
         tipo: "Entrata",
         categoria: "Altro",
         metodo_pagamento: payload.metodo_pagamento,
-        riferimento: payload.persona || undefined,
+        persona_id: payload.persona_id || undefined,
+        riferimento: payload.persona_label || undefined,
+        riferimento_tipo: payload.riferimento_tipo || undefined,
+        riferimento_id: payload.riferimento_id || undefined,
         note: `[${payload.categoria_entrata}] ${payload.descrizione}`,
       });
       if (error) throw error;

@@ -11,6 +11,7 @@ import {
   LogOut,
   ClipboardCheck,
   Ticket,
+  Link2,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { NavLink } from "@/components/NavLink";
@@ -44,6 +45,7 @@ const allMenuItems = [
   { title: "Report", url: "/report", icon: BarChart3, roles: ["admin", "segreteria"] },
   { title: "Presenze", url: "/presenze", icon: ClipboardCheck, roles: ["admin", "segreteria", "allenatore"] },
   { title: "Tessere Ingressi", url: "/tessere-ingressi", icon: Ticket, roles: ["admin", "segreteria"] },
+  { title: "Migrazione Movimenti", url: "/migrazione-movimenti", icon: Link2, roles: ["admin"] },
   { title: "Impostazioni", url: "/impostazioni", icon: Settings, roles: ["admin"] },
 ];
 

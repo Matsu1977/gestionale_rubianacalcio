@@ -17,6 +17,7 @@ import Report from "./pages/Report";
 import Presenze from "./pages/Presenze";
 import TessereIngressi from "./pages/TessereIngressi";
 import Impostazioni from "./pages/Impostazioni";
+import MigrazioneMovimenti from "./pages/MigrazioneMovimenti";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -79,6 +80,7 @@ function ProtectedRoutes() {
         <Route path="/presenze" element={<Presenze />} />
         {hasFullAccess && <Route path="/tessere-ingressi" element={<TessereIngressi />} />}
         {isAdmin && <Route path="/impostazioni" element={<Impostazioni />} />}
+        {isAdmin && <Route path="/migrazione-movimenti" element={<MigrazioneMovimenti />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppLayout>

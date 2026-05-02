@@ -171,22 +171,8 @@ export default function Presenze() {
     onError: (err: any) => toast.error(err.message),
   });
 
-  const togglePresenzaMutation = useMutation({
-    mutationFn: async ({ personaId, presente }: { personaId: string; presente: boolean }) => {
-      if (!sessione?.id) throw new Error("Nessuna sessione");
-      const { error } = await supabase
-        .from("presenze")
-        .upsert(
-          { sessione_id: sessione.id, persona_id: personaId, presente },
-          { onConflict: "sessione_id,persona_id" }
-        );
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["presenze", sessione?.id] });
-    },
-    onError: (err: any) => toast.error(err.message),
-  });
+  // togglePresenzaMutation rimosso: sostituito da togglePresenzaWithRefresh più sotto
+  // (che invalida anche la cache delle tessere quando il trigger DB scala un ingresso).
 
   // Tessere ingressi attive per il corso selezionato
   const { data: tessereCorso = [] } = useQuery({
@@ -215,32 +201,28 @@ export default function Presenze() {
     return map;
   }, [tessereCorso]);
 
-  const scalaIngressoMutation = useMutation({
-    mutationFn: async ({ tesseraId, personaId }: { tesseraId: string; personaId: string }) => {
-      const tessera = tessereCorso.find((t: any) => t.id === tesseraId);
-      if (!tessera) throw new Error("Tessera non trovata");
-      if (tessera.ingressi_usati >= tessera.ingressi_totali) throw new Error("Ingressi esauriti");
-
-      const { error: updErr } = await supabase
-        .from("tessere_ingressi")
-        .update({ ingressi_usati: tessera.ingressi_usati + 1 })
-        .eq("id", tesseraId);
-      if (updErr) throw updErr;
-
-      await supabase.from("consumo_ingressi").insert({
-        tessera_id: tesseraId,
-        presenza_id: sessione?.id ?? null,
-        data_consumo: dateStr,
-        note: `Presenza ${selectedCorso} ${dateStr}`,
-      });
+  // Lo scalo della tessera ora avviene automaticamente via trigger DB.
+  // Quando una presenza diventa true e l'atleta NON ha un abbonamento attivo,
+  // un ingresso viene scalato dalla tessera. Quando torna false, viene riaccreditato.
+  // Invalido la cache delle tessere ogni volta che cambia una presenza.
+  const togglePresenzaWithRefresh = useMutation({
+    mutationFn: async ({ personaId, presente }: { personaId: string; presente: boolean }) => {
+      if (!sessione?.id) throw new Error("Nessuna sessione");
+      const { error } = await supabase
+        .from("presenze")
+        .upsert(
+          { sessione_id: sessione.id, persona_id: personaId, presente },
+          { onConflict: "sessione_id,persona_id" }
+        );
+      if (error) throw error;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["presenze", sessione?.id] });
       queryClient.invalidateQueries({ queryKey: ["tessere-corso", selectedCorso] });
       queryClient.invalidateQueries({ queryKey: ["tessere-ingressi"] });
       queryClient.invalidateQueries({ queryKey: ["tessere-dashboard"] });
-      toast.success("Ingresso scalato");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (err: any) => toast.error(err.message),
   });
 
   const presenzeMap = useMemo(() => {
@@ -365,29 +347,18 @@ export default function Presenze() {
                           <Checkbox
                             checked={presenzeMap[a.id] ?? false}
                             onCheckedChange={(checked) =>
-                              togglePresenzaMutation.mutate({ personaId: a.id, presente: !!checked })
+                              togglePresenzaWithRefresh.mutate({ personaId: a.id, presente: !!checked })
                             }
                           />
                         </TableCell>
                         <TableCell className="text-center">
                           {tessera ? (
-                            <div className="flex items-center justify-center gap-2">
-                              <Badge variant={rimasti <= 2 ? "destructive" : "outline"}>
-                                <Ticket className="h-3 w-3 mr-1" />{rimasti}/{tessera.ingressi_totali}
-                              </Badge>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                disabled={scalaIngressoMutation.isPending}
-                                onClick={() => {
-                                  if (confirm(`Scalare 1 ingresso dalla tessera di ${a.cognome} ${a.nome}? (rimasti: ${rimasti})`)) {
-                                    scalaIngressoMutation.mutate({ tesseraId: tessera.id, personaId: a.id });
-                                  }
-                                }}
-                              >
-                                –1
-                              </Button>
-                            </div>
+                            <Badge
+                              variant={rimasti <= 2 ? "destructive" : "outline"}
+                              title="Lo scalo è automatico al check della presenza (se l'atleta non ha abbonamento attivo)"
+                            >
+                              <Ticket className="h-3 w-3 mr-1" />{rimasti}/{tessera.ingressi_totali}
+                            </Badge>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
