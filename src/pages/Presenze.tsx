@@ -215,32 +215,28 @@ export default function Presenze() {
     return map;
   }, [tessereCorso]);
 
-  const scalaIngressoMutation = useMutation({
-    mutationFn: async ({ tesseraId, personaId }: { tesseraId: string; personaId: string }) => {
-      const tessera = tessereCorso.find((t: any) => t.id === tesseraId);
-      if (!tessera) throw new Error("Tessera non trovata");
-      if (tessera.ingressi_usati >= tessera.ingressi_totali) throw new Error("Ingressi esauriti");
-
-      const { error: updErr } = await supabase
-        .from("tessere_ingressi")
-        .update({ ingressi_usati: tessera.ingressi_usati + 1 })
-        .eq("id", tesseraId);
-      if (updErr) throw updErr;
-
-      await supabase.from("consumo_ingressi").insert({
-        tessera_id: tesseraId,
-        presenza_id: sessione?.id ?? null,
-        data_consumo: dateStr,
-        note: `Presenza ${selectedCorso} ${dateStr}`,
-      });
+  // Lo scalo della tessera ora avviene automaticamente via trigger DB.
+  // Quando una presenza diventa true e l'atleta NON ha un abbonamento attivo,
+  // un ingresso viene scalato dalla tessera. Quando torna false, viene riaccreditato.
+  // Invalido la cache delle tessere ogni volta che cambia una presenza.
+  const togglePresenzaWithRefresh = useMutation({
+    mutationFn: async ({ personaId, presente }: { personaId: string; presente: boolean }) => {
+      if (!sessione?.id) throw new Error("Nessuna sessione");
+      const { error } = await supabase
+        .from("presenze")
+        .upsert(
+          { sessione_id: sessione.id, persona_id: personaId, presente },
+          { onConflict: "sessione_id,persona_id" }
+        );
+      if (error) throw error;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["presenze", sessione?.id] });
       queryClient.invalidateQueries({ queryKey: ["tessere-corso", selectedCorso] });
       queryClient.invalidateQueries({ queryKey: ["tessere-ingressi"] });
       queryClient.invalidateQueries({ queryKey: ["tessere-dashboard"] });
-      toast.success("Ingresso scalato");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (err: any) => toast.error(err.message),
   });
 
   const presenzeMap = useMemo(() => {
