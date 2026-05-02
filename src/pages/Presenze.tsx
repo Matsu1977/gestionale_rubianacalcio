@@ -361,29 +361,18 @@ export default function Presenze() {
                           <Checkbox
                             checked={presenzeMap[a.id] ?? false}
                             onCheckedChange={(checked) =>
-                              togglePresenzaMutation.mutate({ personaId: a.id, presente: !!checked })
+                              togglePresenzaWithRefresh.mutate({ personaId: a.id, presente: !!checked })
                             }
                           />
                         </TableCell>
                         <TableCell className="text-center">
                           {tessera ? (
-                            <div className="flex items-center justify-center gap-2">
-                              <Badge variant={rimasti <= 2 ? "destructive" : "outline"}>
-                                <Ticket className="h-3 w-3 mr-1" />{rimasti}/{tessera.ingressi_totali}
-                              </Badge>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                disabled={scalaIngressoMutation.isPending}
-                                onClick={() => {
-                                  if (confirm(`Scalare 1 ingresso dalla tessera di ${a.cognome} ${a.nome}? (rimasti: ${rimasti})`)) {
-                                    scalaIngressoMutation.mutate({ tesseraId: tessera.id, personaId: a.id });
-                                  }
-                                }}
-                              >
-                                –1
-                              </Button>
-                            </div>
+                            <Badge
+                              variant={rimasti <= 2 ? "destructive" : "outline"}
+                              title="Lo scalo è automatico al check della presenza (se l'atleta non ha abbonamento attivo)"
+                            >
+                              <Ticket className="h-3 w-3 mr-1" />{rimasti}/{tessera.ingressi_totali}
+                            </Badge>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
