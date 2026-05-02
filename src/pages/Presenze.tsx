@@ -171,22 +171,8 @@ export default function Presenze() {
     onError: (err: any) => toast.error(err.message),
   });
 
-  const togglePresenzaMutation = useMutation({
-    mutationFn: async ({ personaId, presente }: { personaId: string; presente: boolean }) => {
-      if (!sessione?.id) throw new Error("Nessuna sessione");
-      const { error } = await supabase
-        .from("presenze")
-        .upsert(
-          { sessione_id: sessione.id, persona_id: personaId, presente },
-          { onConflict: "sessione_id,persona_id" }
-        );
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["presenze", sessione?.id] });
-    },
-    onError: (err: any) => toast.error(err.message),
-  });
+  // togglePresenzaMutation rimosso: sostituito da togglePresenzaWithRefresh più sotto
+  // (che invalida anche la cache delle tessere quando il trigger DB scala un ingresso).
 
   // Tessere ingressi attive per il corso selezionato
   const { data: tessereCorso = [] } = useQuery({
