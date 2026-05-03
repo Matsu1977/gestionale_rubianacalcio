@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import {
-  Settings, Users, Shield, UserCog, Trash2, Loader2, KeyRound, Ban, CheckCircle2, UserPlus, Link, Unlink, CreditCard, BookOpen, Pencil, FileText,
+  Settings, Users, Shield, UserCog, Trash2, Loader2, KeyRound, Ban, CheckCircle2, UserPlus, Link, Unlink, CreditCard, BookOpen, Pencil, FileText, UserX,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PaymentSettingsCard from "@/components/impostazioni/PaymentSettingsCard";
@@ -188,6 +188,15 @@ export default function Impostazioni() {
     onError: (err: any) => toast.error(err.message),
   });
 
+  const deleteUserMutation = useMutation({
+    mutationFn: (userId: string) => callAdminApi("delete_user", { user_id: userId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success("Utente eliminato definitivamente");
+    },
+    onError: (err: any) => toast.error(err.message || "Errore durante l'eliminazione"),
+  });
+
   if (currentRole !== "admin") {
     return (
       <div className="flex items-center justify-center h-64">
@@ -354,15 +363,15 @@ export default function Impostazioni() {
                               {u.role && (
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                      <Trash2 className="h-4 w-4" />
+                                    <Button variant="ghost" size="icon" title="Rimuovi ruolo (soft)" className="text-destructive hover:text-destructive">
+                                      <UserX className="h-4 w-4" />
                                     </Button>
                                   </AlertDialogTrigger>
                                   <AlertDialogContent>
                                     <AlertDialogHeader>
                                       <AlertDialogTitle>Rimuovere il ruolo?</AlertDialogTitle>
                                       <AlertDialogDescription>
-                                        L'utente {u.email} non potrà più accedere al gestionale.
+                                        L'utente {u.email} non potrà più accedere al gestionale, ma resterà presente nel sistema.
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -372,6 +381,32 @@ export default function Impostazioni() {
                                   </AlertDialogContent>
                                 </AlertDialog>
                               )}
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" title="Elimina definitivamente (hard)" className="text-destructive hover:bg-destructive/10">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Eliminare definitivamente l'utente?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Sei sicuro di voler eliminare definitivamente <strong>{u.email}</strong>? L'azione è irreversibile.
+                                      <br /><br />
+                                      Se l'utente ha dati associati (pagamenti, abbonamenti, tessere, presenze) l'eliminazione verrà bloccata.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Annulla</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      onClick={() => deleteUserMutation.mutate(u.id)}
+                                    >
+                                      Elimina definitivamente
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </TableCell>
                         </TableRow>

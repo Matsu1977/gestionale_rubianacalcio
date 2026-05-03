@@ -183,6 +183,62 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "delete_user") {
+      const { user_id, force } = params;
+      if (!user_id) throw new Error("user_id è obbligatorio");
+      if (user_id === caller.id) throw new Error("Non puoi eliminare il tuo stesso account");
+
+      // Trova persona collegata
+      const { data: persona } = await supabaseAdmin
+        .from("persone")
+        .select("id")
+        .eq("user_id", user_id)
+        .maybeSingle();
+
+      // Verifica dati associati (movimenti, abbonamenti, tessere, tesseramenti, presenze)
+      if (persona && !force) {
+        const checks = await Promise.all([
+          supabaseAdmin.from("movimenti").select("id", { count: "exact", head: true }).eq("persona_id", persona.id),
+          supabaseAdmin.from("abbonamenti").select("id", { count: "exact", head: true }).eq("persona_id", persona.id),
+          supabaseAdmin.from("tessere_ingressi").select("id", { count: "exact", head: true }).eq("persona_id", persona.id),
+          supabaseAdmin.from("tesseramenti").select("id", { count: "exact", head: true }).eq("persona_id", persona.id),
+          supabaseAdmin.from("presenze").select("id", { count: "exact", head: true }).eq("persona_id", persona.id),
+        ]);
+        const totals = {
+          movimenti: checks[0].count || 0,
+          abbonamenti: checks[1].count || 0,
+          tessere: checks[2].count || 0,
+          tesseramenti: checks[3].count || 0,
+          presenze: checks[4].count || 0,
+        };
+        const hasData = Object.values(totals).some((n) => n > 0);
+        if (hasData) {
+          return new Response(JSON.stringify({
+            error: "Impossibile eliminare: utente con dati associati",
+            details: totals,
+          }), { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
+
+      // Scollega persona (se esiste e nessun dato associato)
+      if (persona) {
+        await supabaseAdmin.from("persone").update({ user_id: null }).eq("user_id", user_id);
+      }
+
+      // Pulisci tabelle dipendenti dall'utente
+      await supabaseAdmin.from("user_roles").delete().eq("user_id", user_id);
+      await supabaseAdmin.from("notifiche_lette").delete().eq("user_id", user_id);
+      await supabaseAdmin.from("notifiche").delete().eq("user_id", user_id);
+      await supabaseAdmin.from("profiles").delete().eq("id", user_id);
+
+      const { error: delErr } = await supabaseAdmin.auth.admin.deleteUser(user_id);
+      if (delErr) throw delErr;
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "check_stripe_status") {
       const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
       if (!stripeKey) {
