@@ -477,9 +477,17 @@ export default function AtletaDashboard() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Stato</span>
-                      <Badge variant={abb.stato_pagamento === "Pagato" ? "default" : "secondary"}>
-                        {abb.stato_pagamento}
-                      </Badge>
+                      {(() => {
+                        const pagato = abbPagatiSet.has(abb.id);
+                        return (
+                          <Badge
+                            variant={pagato ? "default" : "secondary"}
+                            className={pagato ? "bg-green-500/20 text-green-700 hover:bg-green-500/30" : "bg-red-500/15 text-red-700"}
+                          >
+                            {pagato ? "Pagato" : "Non pagato"}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                   </div>
                 ))
