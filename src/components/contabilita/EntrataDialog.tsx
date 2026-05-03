@@ -25,6 +25,8 @@ const CAT_TESSERA = "Tessera ingressi";
 const CAT_TESSERAMENTO = "Tesseramento";
 const CAT_QUOTA = "Quota associativa";
 
+const CATS_CON_SERVIZIO = [CAT_ABBONAMENTO, CAT_TESSERA, CAT_TESSERAMENTO, CAT_QUOTA];
+
 const schema = z.object({
   data: z.string().min(1, "Data obbligatoria"),
   importo: z.string().min(1, "Importo obbligatorio").refine((v) => !isNaN(Number(v)) && Number(v) > 0, "Importo deve essere maggiore di 0"),
@@ -33,6 +35,15 @@ const schema = z.object({
   metodo_pagamento: z.enum(["Contanti", "Bonifico", "Carta", "Satispay", "Altro"], { required_error: "Seleziona metodo" }),
   persona_id: z.string().optional().or(z.literal("")),
   servizio_id: z.string().optional().or(z.literal("")),
+}).superRefine((vals, ctx) => {
+  if (CATS_CON_SERVIZIO.includes(vals.categoria_entrata)) {
+    if (!vals.persona_id) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["persona_id"], message: "Seleziona la persona per collegare il servizio" });
+    }
+    if (!vals.servizio_id) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["servizio_id"], message: "Seleziona il servizio collegato" });
+    }
+  }
 });
 
 type FormValues = z.infer<typeof schema>;
