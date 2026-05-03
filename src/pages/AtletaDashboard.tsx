@@ -112,6 +112,25 @@ export default function AtletaDashboard() {
     enabled: !!persona,
   });
 
+  // Movimenti collegati agli abbonamenti dell'atleta (per stato pagamento derivato)
+  const { data: movimentiAbb } = useQuery({
+    queryKey: ["atleta-movimenti-abbonamenti", persona?.id, (abbonamenti || []).map((a) => a.id).join(",")],
+    queryFn: async () => {
+      const abbIds = (abbonamenti || []).map((a) => a.id);
+      if (abbIds.length === 0) return [];
+      const { data } = await supabase
+        .from("movimenti")
+        .select("riferimento_id")
+        .eq("riferimento_tipo", "abbonamento")
+        .eq("tipo", "Entrata")
+        .in("riferimento_id", abbIds);
+      return data || [];
+    },
+    enabled: !!abbonamenti && abbonamenti.length > 0,
+  });
+
+  const abbPagatiSet = new Set((movimentiAbb || []).map((m) => m.riferimento_id).filter(Boolean) as string[]);
+
   // Get comunicazioni sent to this persona or their corso
   const { data: comunicazioni } = useQuery({
     queryKey: ["atleta-comunicazioni", persona?.id],
