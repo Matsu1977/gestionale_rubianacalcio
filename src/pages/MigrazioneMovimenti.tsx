@@ -134,7 +134,7 @@ export default function MigrazioneMovimenti() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Migrazione movimenti storici</h1>
           <p className="text-sm text-muted-foreground">
-            Collega i pagamenti già registrati ai servizi (abbonamenti, tessere, tesseramenti).
+            Solo per dati vecchi. I nuovi pagamenti vengono collegati automaticamente dalla schermata "Nuova Entrata".
           </p>
         </div>
       </div>

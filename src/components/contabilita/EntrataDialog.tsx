@@ -25,6 +25,8 @@ const CAT_TESSERA = "Tessera ingressi";
 const CAT_TESSERAMENTO = "Tesseramento";
 const CAT_QUOTA = "Quota associativa";
 
+const CATS_CON_SERVIZIO = [CAT_ABBONAMENTO, CAT_TESSERA, CAT_TESSERAMENTO, CAT_QUOTA];
+
 const schema = z.object({
   data: z.string().min(1, "Data obbligatoria"),
   importo: z.string().min(1, "Importo obbligatorio").refine((v) => !isNaN(Number(v)) && Number(v) > 0, "Importo deve essere maggiore di 0"),
@@ -33,6 +35,15 @@ const schema = z.object({
   metodo_pagamento: z.enum(["Contanti", "Bonifico", "Carta", "Satispay", "Altro"], { required_error: "Seleziona metodo" }),
   persona_id: z.string().optional().or(z.literal("")),
   servizio_id: z.string().optional().or(z.literal("")),
+}).superRefine((vals, ctx) => {
+  if (CATS_CON_SERVIZIO.includes(vals.categoria_entrata)) {
+    if (!vals.persona_id) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["persona_id"], message: "Seleziona la persona per collegare il servizio" });
+    }
+    if (!vals.servizio_id) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["servizio_id"], message: "Seleziona il servizio collegato" });
+    }
+  }
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -241,41 +252,54 @@ export default function EntrataDialog({ open, onOpenChange, onSave, isSaving }: 
               </FormItem>
             )} />
 
-            {showServizioField && (
-              <FormField control={form.control} name="servizio_id" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    {categoriaEntrata === CAT_ABBONAMENTO && "Abbonamento collegato"}
-                    {categoriaEntrata === CAT_TESSERA && "Tessera collegata"}
-                    {(categoriaEntrata === CAT_TESSERAMENTO || categoriaEntrata === CAT_QUOTA) && "Tesseramento collegato"}
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger><SelectValue placeholder="Seleziona il servizio" /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categoriaEntrata === CAT_ABBONAMENTO && abbonamenti.map((a: any) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          {a.corso} — {a.stagione} (€{Number(a.importo_totale).toFixed(2)})
-                        </SelectItem>
-                      ))}
-                      {categoriaEntrata === CAT_TESSERA && tessere.map((t: any) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.corso} — {format(new Date(t.data_acquisto), "dd/MM/yyyy")} — {t.ingressi_totali - t.ingressi_usati}/{t.ingressi_totali}
-                        </SelectItem>
-                      ))}
-                      {(categoriaEntrata === CAT_TESSERAMENTO || categoriaEntrata === CAT_QUOTA) && tesseramenti.map((t: any) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.tipo_tesseramento} — {t.stagione} (€{Number(t.importo).toFixed(2)})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>Il pagamento sarà collegato direttamente al servizio (no campo note).</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            )}
+            {showServizioField && (() => {
+              const lista =
+                categoriaEntrata === CAT_ABBONAMENTO ? abbonamenti :
+                categoriaEntrata === CAT_TESSERA ? tessere :
+                tesseramenti;
+              const noServizi = lista.length === 0;
+              return (
+                <FormField control={form.control} name="servizio_id" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Seleziona servizio *
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={noServizi}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={noServizi ? "Nessun servizio disponibile per questa persona" : "Seleziona il servizio"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categoriaEntrata === CAT_ABBONAMENTO && abbonamenti.map((a: any) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.corso} — {a.stagione} (€{Number(a.importo_totale).toFixed(2)})
+                          </SelectItem>
+                        ))}
+                        {categoriaEntrata === CAT_TESSERA && tessere.map((t: any) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.corso} — {format(new Date(t.data_acquisto), "dd/MM/yyyy")} — {t.ingressi_totali - t.ingressi_usati}/{t.ingressi_totali}
+                          </SelectItem>
+                        ))}
+                        {(categoriaEntrata === CAT_TESSERAMENTO || categoriaEntrata === CAT_QUOTA) && tesseramenti.map((t: any) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.tipo_tesseramento} — {t.stagione} (€{Number(t.importo).toFixed(2)})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {noServizi ? (
+                      <FormDescription className="text-amber-700">
+                        Nessun {categoriaEntrata === CAT_ABBONAMENTO ? "abbonamento" : categoriaEntrata === CAT_TESSERA ? "a tessera ingressi" : "tesseramento"} attivo. Crea prima il servizio nella sezione dedicata, poi torna qui per registrare il pagamento.
+                      </FormDescription>
+                    ) : (
+                      <FormDescription>Il pagamento sarà collegato direttamente al servizio selezionato.</FormDescription>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              );
+            })()}
 
             <FormField control={form.control} name="importo" render={({ field }) => (
               <FormItem>
