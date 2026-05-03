@@ -188,6 +188,15 @@ export default function Impostazioni() {
     onError: (err: any) => toast.error(err.message),
   });
 
+  const deleteUserMutation = useMutation({
+    mutationFn: (userId: string) => callAdminApi("delete_user", { user_id: userId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success("Utente eliminato definitivamente");
+    },
+    onError: (err: any) => toast.error(err.message || "Errore durante l'eliminazione"),
+  });
+
   if (currentRole !== "admin") {
     return (
       <div className="flex items-center justify-center h-64">
