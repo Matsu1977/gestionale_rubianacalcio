@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, Database } from "@/integrations/supabase/types";
 import { motion } from "framer-motion";
-import { Heart, Search, CheckCircle, XCircle, Plus } from "lucide-react";
+import { Heart, Search, CheckCircle, XCircle, Plus, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 type Persona = Tables<"persone">;
@@ -26,6 +27,10 @@ export default function Soci() {
   const [quotaDialog, setQuotaDialog] = useState<Persona | null>(null);
   const [importo, setImporto] = useState("50");
   const [metodo, setMetodo] = useState<MetodoPag>("Contanti");
+  const [newSocioOpen, setNewSocioOpen] = useState(false);
+  const [tabMode, setTabMode] = useState<"existing" | "new">("existing");
+  const [selectedPersonaId, setSelectedPersonaId] = useState("");
+  const [newSocio, setNewSocio] = useState({ nome: "", cognome: "", codice_fiscale: "", email: "", telefono: "" });
 
   const { data: sociIds = [] } = useQuery({
     queryKey: ["ruoli-socio"],
@@ -88,6 +93,59 @@ export default function Soci() {
     onError: (e) => toast.error("Errore: " + e.message),
   });
 
+  const personeNonSocie = persone.filter((p) => !sociIds.includes(p.id));
+
+  const createSocioMutation = useMutation({
+    mutationFn: async () => {
+      let personaId = selectedPersonaId;
+
+      if (tabMode === "new") {
+        if (!newSocio.nome.trim() || !newSocio.cognome.trim()) {
+          throw new Error("Nome e cognome obbligatori");
+        }
+        const { data: pers, error } = await supabase
+          .from("persone")
+          .insert({
+            nome: newSocio.nome.trim(),
+            cognome: newSocio.cognome.trim(),
+            codice_fiscale: newSocio.codice_fiscale.trim().toUpperCase() || null,
+            email: newSocio.email.trim() || null,
+            telefono: newSocio.telefono.trim() || null,
+          })
+          .select("id")
+          .single();
+        if (error) throw error;
+        personaId = pers.id;
+      } else {
+        if (!personaId) throw new Error("Seleziona una persona");
+      }
+
+      // Verifica che non sia già socio
+      const { data: existing } = await supabase
+        .from("ruoli")
+        .select("id")
+        .eq("persona_id", personaId)
+        .eq("tipo_ruolo", "Socio")
+        .maybeSingle();
+      if (existing) throw new Error("Questa persona è già socio");
+
+      const { error: ruoloErr } = await supabase
+        .from("ruoli")
+        .insert({ persona_id: personaId, tipo_ruolo: "Socio" });
+      if (ruoloErr) throw ruoloErr;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ruoli-socio"] });
+      queryClient.invalidateQueries({ queryKey: ["persone"] });
+      toast.success("Socio aggiunto");
+      setNewSocioOpen(false);
+      setSelectedPersonaId("");
+      setNewSocio({ nome: "", cognome: "", codice_fiscale: "", email: "", telefono: "" });
+      setTabMode("existing");
+    },
+    onError: (e) => toast.error("Errore: " + e.message),
+  });
+
   const soci = persone.filter((p) => sociIds.includes(p.id));
 
   const filtered = soci.filter((p) => {
@@ -100,13 +158,16 @@ export default function Soci() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Soci</h1>
           <p className="text-muted-foreground mt-1">
             {totSoci} soci registrati · {totQuotePagate} quote pagate ({new Date().getFullYear()})
           </p>
         </div>
+        <Button onClick={() => setNewSocioOpen(true)}>
+          <UserPlus className="h-4 w-4 mr-2" /> Nuovo Socio
+        </Button>
       </div>
 
       <div className="relative max-w-sm">
@@ -222,6 +283,85 @@ export default function Soci() {
               }}
             >
               {pagaQuotaMutation.isPending ? "Salvataggio..." : "Registra Pagamento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Nuovo Socio Dialog */}
+      <Dialog open={newSocioOpen} onOpenChange={(open) => {
+        setNewSocioOpen(open);
+        if (!open) {
+          setSelectedPersonaId("");
+          setNewSocio({ nome: "", cognome: "", codice_fiscale: "", email: "", telefono: "" });
+          setTabMode("existing");
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nuovo Socio</DialogTitle>
+            <DialogDescription>
+              Aggiungi un nuovo socio assegnando il ruolo a una persona esistente o creandone una nuova.
+            </DialogDescription>
+          </DialogHeader>
+          <Tabs value={tabMode} onValueChange={(v) => setTabMode(v as "existing" | "new")}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="existing">Persona esistente</TabsTrigger>
+              <TabsTrigger value="new">Nuova persona</TabsTrigger>
+            </TabsList>
+            <TabsContent value="existing" className="space-y-3 pt-3">
+              <div className="space-y-2">
+                <Label>Persona</Label>
+                <Select value={selectedPersonaId} onValueChange={setSelectedPersonaId}>
+                  <SelectTrigger><SelectValue placeholder="Seleziona persona" /></SelectTrigger>
+                  <SelectContent>
+                    {personeNonSocie.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">Tutte le persone sono già socie</div>
+                    ) : personeNonSocie
+                      .sort((a, b) => a.cognome.localeCompare(b.cognome))
+                      .map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.cognome} {p.nome}</SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+            <TabsContent value="new" className="space-y-3 pt-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Nome *</Label>
+                  <Input value={newSocio.nome} onChange={(e) => setNewSocio({ ...newSocio, nome: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Cognome *</Label>
+                  <Input value={newSocio.cognome} onChange={(e) => setNewSocio({ ...newSocio, cognome: e.target.value })} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Codice Fiscale</Label>
+                <Input
+                  value={newSocio.codice_fiscale}
+                  onChange={(e) => setNewSocio({ ...newSocio, codice_fiscale: e.target.value.toUpperCase() })}
+                  className="uppercase"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input type="email" value={newSocio.email} onChange={(e) => setNewSocio({ ...newSocio, email: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Telefono</Label>
+                <Input value={newSocio.telefono} onChange={(e) => setNewSocio({ ...newSocio, telefono: e.target.value })} />
+              </div>
+            </TabsContent>
+          </Tabs>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewSocioOpen(false)}>Annulla</Button>
+            <Button
+              disabled={createSocioMutation.isPending}
+              onClick={() => createSocioMutation.mutate()}
+            >
+              {createSocioMutation.isPending ? "Salvataggio..." : "Aggiungi Socio"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -99,13 +99,35 @@ export default function Abbonamenti() {
         const { error } = await supabase.from("abbonamenti").update(payload).eq("id", abb.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("abbonamenti").insert(payload);
+        const { data: inserted, error } = await supabase
+          .from("abbonamenti")
+          .insert(payload)
+          .select("id, persona_id, corso, importo_totale, stagione")
+          .single();
         if (error) throw error;
+        // Genera movimento contabile collegato (entrata)
+        const importo = Number(inserted.importo_totale) || 0;
+        if (importo > 0) {
+          const { error: movErr } = await supabase.from("movimenti").insert({
+            tipo: "Entrata",
+            categoria: "Abbonamento",
+            metodo_pagamento: "Contanti",
+            importo,
+            persona_id: inserted.persona_id,
+            riferimento: `Abbonamento ${inserted.corso} ${inserted.stagione}`,
+            note: `Abbonamento ${inserted.corso} - stagione ${inserted.stagione}`,
+            riferimento_tipo: "abbonamento",
+            riferimento_id: inserted.id,
+          });
+          if (movErr) throw movErr;
+        }
       }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["abbonamenti"] });
-      toast.success(variables.id ? "Abbonamento aggiornato" : "Abbonamento creato");
+      queryClient.invalidateQueries({ queryKey: ["movimenti-abbonamenti"] });
+      queryClient.invalidateQueries({ queryKey: ["movimenti-all"] });
+      toast.success(variables.id ? "Abbonamento aggiornato" : "Abbonamento creato e registrato in contabilità");
       setDialogOpen(false);
       setEditing(null);
     },
