@@ -115,7 +115,7 @@ export default function MigrazioneMovimenti() {
   const getServiziPerPersona = (personaId: string, tipo: RifTipo) => {
     if (tipo === "abbonamento") return abbonamenti.filter((a: any) => a.persona_id === personaId);
     if (tipo === "tessera_ingressi") return tessere.filter((t: any) => t.persona_id === personaId);
-    if (tipo === "tesseramento") return tesseramenti.filter((t: any) => t.persona_id === personaId);
+    if (tipo === "tesseramento" || tipo === "quota_socio") return tesseramenti.filter((t: any) => t.persona_id === personaId);
     return [];
   };
 
