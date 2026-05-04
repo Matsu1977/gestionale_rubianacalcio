@@ -93,6 +93,59 @@ export default function Soci() {
     onError: (e) => toast.error("Errore: " + e.message),
   });
 
+  const personeNonSocie = persone.filter((p) => !sociIds.includes(p.id));
+
+  const createSocioMutation = useMutation({
+    mutationFn: async () => {
+      let personaId = selectedPersonaId;
+
+      if (tabMode === "new") {
+        if (!newSocio.nome.trim() || !newSocio.cognome.trim()) {
+          throw new Error("Nome e cognome obbligatori");
+        }
+        const { data: pers, error } = await supabase
+          .from("persone")
+          .insert({
+            nome: newSocio.nome.trim(),
+            cognome: newSocio.cognome.trim(),
+            codice_fiscale: newSocio.codice_fiscale.trim().toUpperCase() || null,
+            email: newSocio.email.trim() || null,
+            telefono: newSocio.telefono.trim() || null,
+          })
+          .select("id")
+          .single();
+        if (error) throw error;
+        personaId = pers.id;
+      } else {
+        if (!personaId) throw new Error("Seleziona una persona");
+      }
+
+      // Verifica che non sia già socio
+      const { data: existing } = await supabase
+        .from("ruoli")
+        .select("id")
+        .eq("persona_id", personaId)
+        .eq("tipo_ruolo", "Socio")
+        .maybeSingle();
+      if (existing) throw new Error("Questa persona è già socio");
+
+      const { error: ruoloErr } = await supabase
+        .from("ruoli")
+        .insert({ persona_id: personaId, tipo_ruolo: "Socio" });
+      if (ruoloErr) throw ruoloErr;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ruoli-socio"] });
+      queryClient.invalidateQueries({ queryKey: ["persone"] });
+      toast.success("Socio aggiunto");
+      setNewSocioOpen(false);
+      setSelectedPersonaId("");
+      setNewSocio({ nome: "", cognome: "", codice_fiscale: "", email: "", telefono: "" });
+      setTabMode("existing");
+    },
+    onError: (e) => toast.error("Errore: " + e.message),
+  });
+
   const soci = persone.filter((p) => sociIds.includes(p.id));
 
   const filtered = soci.filter((p) => {
