@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, Database } from "@/integrations/supabase/types";
 import { motion } from "framer-motion";
-import { Heart, Search, CheckCircle, XCircle, Plus } from "lucide-react";
+import { Heart, Search, CheckCircle, XCircle, Plus, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 type Persona = Tables<"persone">;
@@ -26,6 +27,10 @@ export default function Soci() {
   const [quotaDialog, setQuotaDialog] = useState<Persona | null>(null);
   const [importo, setImporto] = useState("50");
   const [metodo, setMetodo] = useState<MetodoPag>("Contanti");
+  const [newSocioOpen, setNewSocioOpen] = useState(false);
+  const [tabMode, setTabMode] = useState<"existing" | "new">("existing");
+  const [selectedPersonaId, setSelectedPersonaId] = useState("");
+  const [newSocio, setNewSocio] = useState({ nome: "", cognome: "", codice_fiscale: "", email: "", telefono: "" });
 
   const { data: sociIds = [] } = useQuery({
     queryKey: ["ruoli-socio"],
