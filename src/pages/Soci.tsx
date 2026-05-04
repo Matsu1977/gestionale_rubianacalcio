@@ -287,6 +287,85 @@ export default function Soci() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Nuovo Socio Dialog */}
+      <Dialog open={newSocioOpen} onOpenChange={(open) => {
+        setNewSocioOpen(open);
+        if (!open) {
+          setSelectedPersonaId("");
+          setNewSocio({ nome: "", cognome: "", codice_fiscale: "", email: "", telefono: "" });
+          setTabMode("existing");
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nuovo Socio</DialogTitle>
+            <DialogDescription>
+              Aggiungi un nuovo socio assegnando il ruolo a una persona esistente o creandone una nuova.
+            </DialogDescription>
+          </DialogHeader>
+          <Tabs value={tabMode} onValueChange={(v) => setTabMode(v as "existing" | "new")}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="existing">Persona esistente</TabsTrigger>
+              <TabsTrigger value="new">Nuova persona</TabsTrigger>
+            </TabsList>
+            <TabsContent value="existing" className="space-y-3 pt-3">
+              <div className="space-y-2">
+                <Label>Persona</Label>
+                <Select value={selectedPersonaId} onValueChange={setSelectedPersonaId}>
+                  <SelectTrigger><SelectValue placeholder="Seleziona persona" /></SelectTrigger>
+                  <SelectContent>
+                    {personeNonSocie.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">Tutte le persone sono già socie</div>
+                    ) : personeNonSocie
+                      .sort((a, b) => a.cognome.localeCompare(b.cognome))
+                      .map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.cognome} {p.nome}</SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+            <TabsContent value="new" className="space-y-3 pt-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Nome *</Label>
+                  <Input value={newSocio.nome} onChange={(e) => setNewSocio({ ...newSocio, nome: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Cognome *</Label>
+                  <Input value={newSocio.cognome} onChange={(e) => setNewSocio({ ...newSocio, cognome: e.target.value })} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Codice Fiscale</Label>
+                <Input
+                  value={newSocio.codice_fiscale}
+                  onChange={(e) => setNewSocio({ ...newSocio, codice_fiscale: e.target.value.toUpperCase() })}
+                  className="uppercase"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input type="email" value={newSocio.email} onChange={(e) => setNewSocio({ ...newSocio, email: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Telefono</Label>
+                <Input value={newSocio.telefono} onChange={(e) => setNewSocio({ ...newSocio, telefono: e.target.value })} />
+              </div>
+            </TabsContent>
+          </Tabs>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewSocioOpen(false)}>Annulla</Button>
+            <Button
+              disabled={createSocioMutation.isPending}
+              onClick={() => createSocioMutation.mutate()}
+            >
+              {createSocioMutation.isPending ? "Salvataggio..." : "Aggiungi Socio"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
