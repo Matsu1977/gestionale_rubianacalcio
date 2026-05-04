@@ -176,7 +176,8 @@ export default function EntrataDialog({ open, onOpenChange, onSave, isSaving }: 
     if (values.servizio_id) {
       if (categoriaEntrata === CAT_ABBONAMENTO) riferimento_tipo = "abbonamento";
       else if (categoriaEntrata === CAT_TESSERA) riferimento_tipo = "tessera_ingressi";
-      else if (categoriaEntrata === CAT_TESSERAMENTO || categoriaEntrata === CAT_QUOTA) riferimento_tipo = "tesseramento";
+      else if (categoriaEntrata === CAT_TESSERAMENTO) riferimento_tipo = "tesseramento";
+      else if (categoriaEntrata === CAT_QUOTA) riferimento_tipo = "quota_socio";
       riferimento_id = values.servizio_id;
     }
 
