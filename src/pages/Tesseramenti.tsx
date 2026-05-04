@@ -57,13 +57,33 @@ export default function Tesseramenti() {
         const { error } = await supabase.from("tesseramenti").update(payload).eq("id", tess.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("tesseramenti").insert(payload);
+        const { data: inserted, error } = await supabase
+          .from("tesseramenti")
+          .insert(payload)
+          .select("id, persona_id, importo, stagione, tipo_tesseramento, metodo_pagamento")
+          .single();
         if (error) throw error;
+        const importo = Number(inserted.importo) || 0;
+        if (importo > 0) {
+          const { error: movErr } = await supabase.from("movimenti").insert({
+            tipo: "Entrata",
+            categoria: "Tesseramento",
+            metodo_pagamento: (inserted as any).metodo_pagamento || "Contanti",
+            importo,
+            persona_id: inserted.persona_id,
+            riferimento: `Tesseramento ${inserted.tipo_tesseramento} ${inserted.stagione}`,
+            note: `Tesseramento ${inserted.tipo_tesseramento} - stagione ${inserted.stagione}`,
+            riferimento_tipo: "tesseramento",
+            riferimento_id: inserted.id,
+          });
+          if (movErr) throw movErr;
+        }
       }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["tesseramenti"] });
-      toast.success(variables.id ? "Tesseramento aggiornato" : "Tesseramento creato");
+      queryClient.invalidateQueries({ queryKey: ["movimenti-all"] });
+      toast.success(variables.id ? "Tesseramento aggiornato" : "Tesseramento creato e registrato in contabilità");
       setDialogOpen(false);
       setEditing(null);
     },
