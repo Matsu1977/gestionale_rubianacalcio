@@ -13,7 +13,7 @@ import { format, parseISO } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 
-type RifTipo = "abbonamento" | "tessera_ingressi" | "tesseramento";
+type RifTipo = "abbonamento" | "tessera_ingressi" | "tesseramento" | "quota_socio";
 
 export default function MigrazioneMovimenti() {
   const { role } = useAuth();
