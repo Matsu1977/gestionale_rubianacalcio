@@ -70,32 +70,40 @@ export default function TessereIngressi() {
   const createMutation = useMutation({
     mutationFn: async () => {
       if (!form.persona_id || !form.corso) throw new Error("Atleta e corso sono obbligatori");
-      const { error } = await supabase.from("tessere_ingressi").insert({
-        persona_id: form.persona_id,
-        corso: form.corso,
-        ingressi_totali: 11, // 10 paganti + 1 omaggio
-        ingressi_usati: 0,
-        importo: Number(form.importo) || 0,
-        stato_pagamento: "Pagato",
-        note: form.note || null,
-      });
+      const { data: inserted, error } = await supabase
+        .from("tessere_ingressi")
+        .insert({
+          persona_id: form.persona_id,
+          corso: form.corso,
+          ingressi_totali: 11, // 10 paganti + 1 omaggio
+          ingressi_usati: 0,
+          importo: Number(form.importo) || 0,
+          stato_pagamento: "Pagato",
+          note: form.note || null,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
 
-      // Registra movimento contabile se importo > 0
+      // Registra movimento contabile collegato se importo > 0
       if (Number(form.importo) > 0) {
-        await supabase.from("movimenti").insert({
+        const { error: movErr } = await supabase.from("movimenti").insert({
           tipo: "Entrata",
           categoria: "Abbonamento",
           metodo_pagamento: "Contanti",
           importo: Number(form.importo),
           persona_id: form.persona_id,
+          riferimento: `Tessera 10+1 ${form.corso}`,
           note: `Tessera 10+1 ingressi - ${form.corso}`,
           riferimento_tipo: "tessera_ingressi",
+          riferimento_id: inserted.id,
         });
+        if (movErr) throw movErr;
       }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tessere-ingressi"] });
+      qc.invalidateQueries({ queryKey: ["movimenti-all"] });
       toast.success("Tessera creata: 10 ingressi + 1 omaggio");
       setOpen(false);
       setForm({ persona_id: "", corso: "", importo: "", note: "" });
