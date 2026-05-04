@@ -158,13 +158,16 @@ export default function Soci() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Soci</h1>
           <p className="text-muted-foreground mt-1">
             {totSoci} soci registrati · {totQuotePagate} quote pagate ({new Date().getFullYear()})
           </p>
         </div>
+        <Button onClick={() => setNewSocioOpen(true)}>
+          <UserPlus className="h-4 w-4 mr-2" /> Nuovo Socio
+        </Button>
       </div>
 
       <div className="relative max-w-sm">
