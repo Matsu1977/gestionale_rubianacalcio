@@ -13,7 +13,7 @@ import { format, parseISO } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 
-type RifTipo = "abbonamento" | "tessera_ingressi" | "tesseramento";
+type RifTipo = "abbonamento" | "tessera_ingressi" | "tesseramento" | "quota_socio";
 
 export default function MigrazioneMovimenti() {
   const { role } = useAuth();
@@ -115,7 +115,7 @@ export default function MigrazioneMovimenti() {
   const getServiziPerPersona = (personaId: string, tipo: RifTipo) => {
     if (tipo === "abbonamento") return abbonamenti.filter((a: any) => a.persona_id === personaId);
     if (tipo === "tessera_ingressi") return tessere.filter((t: any) => t.persona_id === personaId);
-    if (tipo === "tesseramento") return tesseramenti.filter((t: any) => t.persona_id === personaId);
+    if (tipo === "tesseramento" || tipo === "quota_socio") return tesseramenti.filter((t: any) => t.persona_id === personaId);
     return [];
   };
 

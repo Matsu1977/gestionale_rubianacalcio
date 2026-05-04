@@ -19,11 +19,12 @@ type MetodoPag = Database["public"]["Enums"]["metodo_pagamento"];
 
 const METODI: MetodoPag[] = ["Contanti", "Bonifico", "Carta", "Satispay", "Altro"];
 
-// Categorie speciali che permettono il collegamento a un servizio
-const CAT_ABBONAMENTO = "Abbonamento";
+// Categorie speciali che permettono il collegamento a un servizio.
+// I nomi devono coincidere ESATTAMENTE con quelli presenti in categorie_spesa (tipo='Entrata').
+const CAT_ABBONAMENTO = "Abbonamenti";
 const CAT_TESSERA = "Tessera ingressi";
-const CAT_TESSERAMENTO = "Tesseramento";
-const CAT_QUOTA = "Quota associativa";
+const CAT_TESSERAMENTO = "Tesseramenti";
+const CAT_QUOTA = "Quote sociali";
 
 const CATS_CON_SERVIZIO = [CAT_ABBONAMENTO, CAT_TESSERA, CAT_TESSERAMENTO, CAT_QUOTA];
 
@@ -175,7 +176,8 @@ export default function EntrataDialog({ open, onOpenChange, onSave, isSaving }: 
     if (values.servizio_id) {
       if (categoriaEntrata === CAT_ABBONAMENTO) riferimento_tipo = "abbonamento";
       else if (categoriaEntrata === CAT_TESSERA) riferimento_tipo = "tessera_ingressi";
-      else if (categoriaEntrata === CAT_TESSERAMENTO || categoriaEntrata === CAT_QUOTA) riferimento_tipo = "tesseramento";
+      else if (categoriaEntrata === CAT_TESSERAMENTO) riferimento_tipo = "tesseramento";
+      else if (categoriaEntrata === CAT_QUOTA) riferimento_tipo = "quota_socio";
       riferimento_id = values.servizio_id;
     }
 
