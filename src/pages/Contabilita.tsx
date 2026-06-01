@@ -1,0 +1,326 @@
+import { useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/types";
+import { motion } from "framer-motion";
+import { Wallet, TrendingUp, TrendingDown, Scale, Plus, Trash2, Settings, Filter } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import UscitaDialog from "@/components/contabilita/UscitaDialog";
+import EntrataDialog from "@/components/contabilita/EntrataDialog";
+import CategorieSpesaDialog from "@/components/contabilita/CategorieSpesaDialog";
+
+type Movimento = Tables<"movimenti">;
+type MetodoPag = Database["public"]["Enums"]["metodo_pagamento"];
+
+export default function Contabilita() {
+  const queryClient = useQueryClient();
+  const [uscitaOpen, setUscitaOpen] = useState(false);
+  const [entrataOpen, setEntrataOpen] = useState(false);
+  const [categorieOpen, setCategorieOpen] = useState(false);
+  const [filtroCategoria, setFiltroCategoria] = useState<string>("tutte");
+
+  const { data: movimenti = [], isLoading } = useQuery({
+    queryKey: ["movimenti-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("movimenti")
+        .select("*")
+        .order("data", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: personeMap = {} } = useQuery({
+    queryKey: ["persone-map"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("persone").select("id, nome, cognome");
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      for (const p of data) map[p.id] = `${p.cognome} ${p.nome}`;
+      return map;
+    },
+  });
+
+  const { data: categorieEntrata = [] } = useQuery({
+    queryKey: ["categorie-spesa", "Entrata"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("categorie_spesa").select("nome").eq("tipo", "Entrata").order("nome");
+      if (error) throw error;
+      return data.map((c) => c.nome);
+    },
+  });
+
+  const { data: categorieUscita = [] } = useQuery({
+    queryKey: ["categorie-spesa", "Uscita"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("categorie_spesa").select("nome").eq("tipo", "Uscita").order("nome");
+      if (error) throw error;
+      return data.map((c) => c.nome);
+    },
+  });
+
+  const tutteCategorie = useMemo(() => {
+    const set = new Set<string>();
+    categorieEntrata.forEach((c) => set.add(c));
+    categorieUscita.forEach((c) => set.add(c));
+    // Also add the enum categories from movimenti
+    movimenti.forEach((m) => set.add(m.categoria));
+    // Extract categories from notes like "[Categoria] ..."
+    movimenti.forEach((m) => {
+      if (m.note) {
+        const match = m.note.match(/^\[(.+?)\]/);
+        if (match) set.add(match[1]);
+      }
+    });
+    return Array.from(set).sort();
+  }, [categorieEntrata, categorieUscita, movimenti]);
+
+  const getMovimentoCategoria = (m: Movimento): string => {
+    if (m.note) {
+      const match = m.note.match(/^\[(.+?)\]/);
+      if (match) return match[1];
+    }
+    return m.categoria;
+  };
+
+  const movimentiFiltrati = useMemo(() => {
+    if (filtroCategoria === "tutte") return movimenti;
+    return movimenti.filter((m) => getMovimentoCategoria(m) === filtroCategoria);
+  }, [movimenti, filtroCategoria]);
+  const addUscitaMutation = useMutation({
+    mutationFn: async (payload: {
+      data: string;
+      importo: number;
+      categoria_spesa: string;
+      descrizione: string;
+      metodo_pagamento: MetodoPag;
+      fornitore: string | null;
+    }) => {
+      const { error } = await supabase.from("movimenti").insert({
+        data: payload.data,
+        importo: payload.importo,
+        tipo: "Uscita",
+        categoria: "Altro",
+        metodo_pagamento: payload.metodo_pagamento,
+        riferimento: payload.fornitore || undefined,
+        note: `[${payload.categoria_spesa}] ${payload.descrizione}`,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["movimenti-all"] });
+      toast.success("Uscita registrata");
+      setUscitaOpen(false);
+    },
+    onError: (e) => toast.error("Errore: " + e.message),
+  });
+
+  const addEntrataMutation = useMutation({
+    mutationFn: async (payload: {
+      data: string;
+      importo: number;
+      categoria_entrata: string;
+      descrizione: string;
+      metodo_pagamento: MetodoPag;
+      persona_id: string | null;
+      persona_label: string | null;
+      riferimento_tipo: string | null;
+      riferimento_id: string | null;
+    }) => {
+      const { error } = await supabase.from("movimenti").insert({
+        data: payload.data,
+        importo: payload.importo,
+        tipo: "Entrata",
+        categoria: "Altro",
+        metodo_pagamento: payload.metodo_pagamento,
+        persona_id: payload.persona_id || undefined,
+        riferimento: payload.persona_label || undefined,
+        riferimento_tipo: payload.riferimento_tipo || undefined,
+        riferimento_id: payload.riferimento_id || undefined,
+        note: `[${payload.categoria_entrata}] ${payload.descrizione}`,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["movimenti-all"] });
+      toast.success("Entrata registrata");
+      setEntrataOpen(false);
+    },
+    onError: (e) => toast.error("Errore: " + e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("movimenti").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["movimenti-all"] });
+      toast.success("Movimento eliminato");
+    },
+    onError: (e) => toast.error("Errore: " + e.message),
+  });
+
+  const totaleEntrate = movimentiFiltrati.filter((m) => m.tipo === "Entrata").reduce((s, m) => s + Number(m.importo), 0);
+  const totaleUscite = movimentiFiltrati.filter((m) => m.tipo === "Uscita").reduce((s, m) => s + Number(m.importo), 0);
+  const saldo = totaleEntrate - totaleUscite;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6"
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Contabilità</h1>
+          <p className="text-muted-foreground mt-1">Registro entrate, uscite e movimenti finanziari</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setCategorieOpen(true)}>
+            <Settings className="h-4 w-4 mr-2" /> Categorie
+          </Button>
+          <Button variant="outline" onClick={() => setEntrataOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" /> Nuova Entrata
+          </Button>
+          <Button onClick={() => setUscitaOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" /> Nuova Uscita
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="p-3 rounded-xl bg-green-500/10">
+              <TrendingUp className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Totale Entrate</p>
+              <p className="text-2xl font-bold text-green-600">€{totaleEntrate.toFixed(2)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="p-3 rounded-xl bg-red-500/10">
+              <TrendingDown className="h-6 w-6 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Totale Uscite</p>
+              <p className="text-2xl font-bold text-red-600">€{totaleUscite.toFixed(2)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="p-3 rounded-xl bg-primary/10">
+              <Scale className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Saldo</p>
+              <p className={`text-2xl font-bold ${saldo >= 0 ? "text-green-600" : "text-red-600"}`}>€{saldo.toFixed(2)}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <Filter className="h-4 w-4 text-muted-foreground" />
+        <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="Filtra per categoria" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="tutte">Tutte le categorie</SelectItem>
+            {tutteCategorie.map((c) => (
+              <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {filtroCategoria !== "tutte" && (
+          <Button variant="ghost" size="sm" onClick={() => setFiltroCategoria("tutte")}>
+            Rimuovi filtro
+          </Button>
+        )}
+      </div>
+
+      <div className="rounded-lg border bg-card">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20 text-muted-foreground">Caricamento...</div>
+        ) : movimentiFiltrati.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="p-4 rounded-2xl bg-primary/10 mb-4">
+              <Wallet className="h-10 w-10 text-primary" />
+            </div>
+            <p className="text-lg font-semibold">{filtroCategoria !== "tutte" ? "Nessun movimento per questa categoria" : "Nessun movimento registrato"}</p>
+            <p className="text-sm text-muted-foreground mt-1">I movimenti appariranno qui quando verranno registrati pagamenti</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Data</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Persona / Fornitore</TableHead>
+                <TableHead>Categoria</TableHead>
+                <TableHead className="hidden md:table-cell">Metodo</TableHead>
+                <TableHead className="hidden lg:table-cell">Note</TableHead>
+                <TableHead className="text-right">Importo</TableHead>
+                <TableHead className="w-10"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {movimentiFiltrati.map((m) => (
+                <TableRow key={m.id}>
+                  <TableCell className="text-sm">{new Date(m.data).toLocaleDateString("it-IT")}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={m.tipo === "Entrata" ? "bg-green-500/10 text-green-700 border-green-500/30" : "bg-red-500/10 text-red-700 border-red-500/30"}>
+                      {m.tipo}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {m.persona_id ? (personeMap[m.persona_id] || "—") : (m.riferimento || "—")}
+                  </TableCell>
+                  <TableCell className="text-sm">{getMovimentoCategoria(m)}</TableCell>
+                  <TableCell className="hidden md:table-cell text-sm">{m.metodo_pagamento}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm text-muted-foreground max-w-[200px] truncate">{m.note || "—"}</TableCell>
+                  <TableCell className={`text-right font-medium ${m.tipo === "Entrata" ? "text-green-600" : "text-red-600"}`}>
+                    {m.tipo === "Uscita" ? "−" : "+"}€{Number(m.importo).toFixed(2)}
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteMutation.mutate(m.id)}>
+                      <Trash2 className="h-3 w-3 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+
+      <UscitaDialog
+        open={uscitaOpen}
+        onOpenChange={setUscitaOpen}
+        onSave={(data) => addUscitaMutation.mutate(data)}
+        isSaving={addUscitaMutation.isPending}
+      />
+      <EntrataDialog
+        open={entrataOpen}
+        onOpenChange={setEntrataOpen}
+        onSave={(data) => addEntrataMutation.mutate(data)}
+        isSaving={addEntrataMutation.isPending}
+      />
+      <CategorieSpesaDialog open={categorieOpen} onOpenChange={setCategorieOpen} />
+    </motion.div>
+  );
+}
