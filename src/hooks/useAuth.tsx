@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchRole = async (userId: string) => {
     try {
-      const { data } = await supabase.rpc("get_user_role", { _user_id: userId });
+      const { data } = await (supabase as any).rpc("get_user_role", { _user_id: userId });
       setRole((data as AppRole) ?? null);
     } catch {
       setRole(null);

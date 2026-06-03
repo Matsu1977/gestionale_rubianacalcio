@@ -314,7 +314,6 @@ export default function Impostazioni() {
                                 </Button>
                               </div>
                             ) : (
-                              u.role === "atleta" ? (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -324,9 +323,6 @@ export default function Impostazioni() {
                                   <Link className="mr-1 h-3 w-3" />
                                   Collega
                                 </Button>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">—</span>
-                              )
                             )}
                           </TableCell>
                           <TableCell>

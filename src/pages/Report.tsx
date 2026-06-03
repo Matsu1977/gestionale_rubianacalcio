@@ -236,13 +236,55 @@ export default function Report() {
         </div>
       </div>
 
-      <Tabs defaultValue="entrate" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="entrate" className="flex items-center gap-1"><TrendingUp className="h-4 w-4" /> Entrate</TabsTrigger>
-          <TabsTrigger value="uscite" className="flex items-center gap-1"><TrendingDown className="h-4 w-4" /> Uscite</TabsTrigger>
-          <TabsTrigger value="abbonamenti" className="flex items-center gap-1"><CreditCard className="h-4 w-4" /> Abbonamenti</TabsTrigger>
-          <TabsTrigger value="tesserati" className="flex items-center gap-1"><Users className="h-4 w-4" /> Tesserati</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="riepilogo" className="space-y-4">
+  <TabsList className="grid w-full grid-cols-5">
+    <TabsTrigger value="riepilogo" className="flex items-center gap-1"><BarChart3 className="h-4 w-4" /> Riepilogo</TabsTrigger>
+    <TabsTrigger value="entrate" className="flex items-center gap-1"><TrendingUp className="h-4 w-4" /> Entrate</TabsTrigger>
+    <TabsTrigger value="uscite" className="flex items-center gap-1"><TrendingDown className="h-4 w-4" /> Uscite</TabsTrigger>
+    <TabsTrigger value="abbonamenti" className="flex items-center gap-1"><CreditCard className="h-4 w-4" /> Abbonamenti</TabsTrigger>
+    <TabsTrigger value="tesserati" className="flex items-center gap-1"><Users className="h-4 w-4" /> Tesserati</TabsTrigger>
+  </TabsList>
+
+  {/* RIEPILOGO */}
+  <TabsContent value="riepilogo" className="space-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <Card><CardContent className="pt-6 text-center">
+        <p className="text-sm text-muted-foreground">Totale Entrate</p>
+        <p className="text-3xl font-bold text-primary">{fmt(totaleEntrate)}</p>
+      </CardContent></Card>
+      <Card><CardContent className="pt-6 text-center">
+        <p className="text-sm text-muted-foreground">Totale Uscite</p>
+        <p className="text-3xl font-bold text-destructive">{fmt(totaleUscite)}</p>
+      </CardContent></Card>
+      <Card><CardContent className="pt-6 text-center">
+        <p className="text-sm text-muted-foreground">Saldo</p>
+        <p className={`text-3xl font-bold ${totaleEntrate - totaleUscite >= 0 ? "text-primary" : "text-destructive"}`}>{fmt(totaleEntrate - totaleUscite)}</p>
+      </CardContent></Card>
+    </div>
+    <Card><CardHeader><CardTitle className="text-base">Entrate vs Uscite per Mese</CardTitle></CardHeader><CardContent className="h-[400px]">
+      {filteredMovimenti.length > 0 ? (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={(() => {
+            const map: Record<string, { name: string; entrate: number; uscite: number }> = {};
+            filteredMovimenti.forEach((m) => {
+              const key = format(parseISO(m.data), "MMM yyyy", { locale: it });
+              if (!map[key]) map[key] = { name: key, entrate: 0, uscite: 0 };
+              if (m.tipo === "Entrata") map[key].entrate += Number(m.importo);
+              else map[key].uscite += Number(m.importo);
+            });
+            return Object.values(map);
+          })()}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12 }} />
+            <Tooltip formatter={(v: number) => fmt(v)} />
+            <Bar dataKey="entrate" name="Entrate" fill="hsl(152, 45%, 22%)" radius={[4,4,0,0]} />
+            <Bar dataKey="uscite" name="Uscite" fill="hsl(0, 72%, 51%)" radius={[4,4,0,0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      ) : <p className="text-muted-foreground text-center pt-20">Nessun dato disponibile</p>}
+    </CardContent></Card>
+  </TabsContent>
 
         {/* ENTRATE */}
         <TabsContent value="entrate" className="space-y-4">
