@@ -291,7 +291,7 @@ export default function Report() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card><CardContent className="pt-6 text-center">
               <p className="text-sm text-muted-foreground">Totale Entrate</p>
-              <p className="text-3xl font-bold text-primary">{fmt(totaleEntrate)}</p>
+              <p className="text-3xl font-bold text-green-500">{fmt(totaleEntrate)}</p>
             </CardContent></Card>
             <Card><CardContent className="pt-6 text-center">
               <p className="text-sm text-muted-foreground">N. Movimenti</p>
