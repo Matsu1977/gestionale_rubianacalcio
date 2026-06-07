@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trash2, Receipt, FileSignature } from "lucide-react";
+import { Trash2, Receipt, FileSignature, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import DocumentoFirmaDialog from "./DocumentoFirmaDialog";
 import DocumentiList from "./DocumentiList";
@@ -46,6 +46,7 @@ interface Props {
 export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
   const queryClient = useQueryClient();
   const [firmaOpen, setFirmaOpen] = useState(false);
+  const [inviting, setInviting] = useState(false);
 
   const { data: movimenti = [] } = useQuery({
     queryKey: ["movimenti", persona?.id],
@@ -149,6 +150,22 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
 
   const totaleMovimenti = movimenti.reduce((sum, m) => sum + Number(m.importo), 0);
 
+   const handleInvite = async () => {
+    if (!persona?.email) return;
+    setInviting(true);
+    try {
+      const { error } = await supabase.functions.invoke("invite-user", {
+        body: { email: persona.email, persona_id: persona.id, role: "atleta" },
+      });
+      if (error) throw error;
+      toast.success("Invito inviato a " + persona.email);
+    } catch (err: any) {
+      toast.error("Errore: " + err.message);
+    } finally {
+      setInviting(false);
+    }
+  };
+
   if (!persona) return null;
 
   const statoBadge = (stato: string) => {
@@ -221,7 +238,18 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
               {persona.codice_fiscale && <div><span className="text-muted-foreground">CF:</span> <span className="font-medium uppercase">{persona.codice_fiscale}</span></div>}
               {persona.data_nascita && <div><span className="text-muted-foreground">Nascita:</span> <span className="font-medium">{new Date(persona.data_nascita).toLocaleDateString("it-IT")}</span></div>}
               {persona.telefono && <div><span className="text-muted-foreground">Tel:</span> <span className="font-medium">{persona.telefono}</span></div>}
-              {persona.email && <div><span className="text-muted-foreground">Email:</span> <span className="font-medium">{persona.email}</span></div>}
+              {persona.email && (
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Email:</span>
+                  <span className="font-medium">{persona.email}</span>
+                  {!persona.user_id && (
+                    <Button size="sm" variant="outline" className="h-6 text-xs px-2" onClick={handleInvite} disabled={inviting}>
+                      {inviting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3 mr-1" />}
+                      {inviting ? "Invio..." : "Invita"}
+                    </Button>
+                  )}
+                </div>
+              )}
               {persona.certificato_medico_scadenza && <div className="col-span-2"><span className="text-muted-foreground">Cert. Medico:</span> <span className="font-medium">{new Date(persona.certificato_medico_scadenza).toLocaleDateString("it-IT")}</span></div>}
             </div>
 
