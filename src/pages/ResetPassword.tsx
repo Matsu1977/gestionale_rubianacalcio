@@ -4,25 +4,39 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"invite" | "recovery" | null>(null);
+  const [ready, setReady] = useState(false);
+  const [mode, setMode] = useState<"invite" | "recovery">("recovery");
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Supabase processa il token dall'URL e triggera un evento
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setMode("recovery");
+        setReady(true);
+      } else if (event === "USER_UPDATED") {
+        navigate("/");
+      } else if (session && window.location.hash.includes("type=invite")) {
+        setMode("invite");
+        setReady(true);
+      }
+    });
+
+    // Controlla anche l'hash direttamente
     const hash = window.location.hash;
-    if (hash.includes("type=invite")) {
-      setMode("invite");
-    } else if (hash.includes("type=recovery")) {
-      setMode("recovery");
-    } else {
-      navigate("/login");
+    if (hash.includes("type=invite") || hash.includes("type=recovery")) {
+      setMode(hash.includes("type=invite") ? "invite" : "recovery");
+      setReady(true);
     }
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,22 +46,30 @@ export default function ResetPassword() {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success(mode === "invite" ? "Benvenuto! Accesso in corso..." : "Password aggiornata!");
+      toast.success(mode === "invite" ? "Benvenuto!" : "Password aggiornata!");
       navigate("/");
     }
     setLoading(false);
   };
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>{mode === "invite" ? "Crea la tua password" : "Nuova Password"}</CardTitle>
-          <CardDescription>
+          <p className="text-sm text-muted-foreground mt-1">
             {mode === "invite"
               ? "Benvenuto! Scegli una password per accedere al gestionale."
               : "Inserisci la nuova password per il tuo account."}
-          </CardDescription>
+          </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
