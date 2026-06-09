@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { User, CalendarCheck, Wallet, FileCheck, MessageSquare, ClipboardCheck, Landmark, Copy, ExternalLink } from "lucide-react";
+import { User, CalendarCheck, Wallet, FileCheck, MessageSquare, ClipboardCheck, Landmark, Copy, ExternalLink, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -193,6 +193,17 @@ export default function AtletaDashboard() {
       const map: Record<string, string> = {};
       (data || []).forEach((s) => { map[s.chiave] = s.valore || ""; });
       return map;
+    },
+  });
+  const { data: figli = [] } = useQuery({
+    queryKey: ["figli", persona?.id],
+    enabled: !!persona,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("familiari")
+        .select("*, figlio:persone!familiari_figlio_id_fkey(id, nome, cognome, data_nascita, certificato_medico_scadenza)")
+        .eq("genitore_id", persona!.id);
+      return data || [];
     },
   });
 
@@ -559,6 +570,48 @@ export default function AtletaDashboard() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Figli / Familiari */}
+      {figli.length > 0 && (
+        <motion.div variants={item} initial="hidden" animate="show">
+          <Card className="glass-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                I miei figli
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {figli.map((f: any) => {
+                const certScad = f.figlio?.certificato_medico_scadenza
+                  ? isBefore(parseISO(f.figlio.certificato_medico_scadenza), today)
+                  : null;
+                return (
+                  <div key={f.id} className="p-3 rounded-lg bg-muted/50 space-y-1 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{f.figlio?.cognome} {f.figlio?.nome}</span>
+                      <Badge variant="outline" className="text-[10px]">{f.relazione}</Badge>
+                    </div>
+                    {f.figlio?.data_nascita && (
+                      <p className="text-xs text-muted-foreground">
+                        Nato il {format(parseISO(f.figlio.data_nascita), "dd/MM/yyyy")}
+                      </p>
+                    )}
+                    {f.figlio?.certificato_medico_scadenza && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Cert. Medico:</span>
+                        <Badge variant={certScad ? "destructive" : "default"} className="text-[10px]">
+                          {certScad ? "Scaduto" : "Valido"} · {format(parseISO(f.figlio.certificato_medico_scadenza), "dd/MM/yyyy")}
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
     </div>
   );
-}
+}  
