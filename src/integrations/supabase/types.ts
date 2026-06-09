@@ -724,6 +724,30 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
+    Relationships: []
+      }
+      familiari: {
+        Row: {
+          id: string
+          genitore_id: string
+          figlio_id: string
+          relazione: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          genitore_id: string
+          figlio_id: string
+          relazione?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          genitore_id?: string
+          figlio_id?: string
+          relazione?: string
+          created_at?: string
+        }
         Relationships: []
       }
     }

@@ -9,10 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trash2, Receipt, FileSignature, Mail, Loader2 } from "lucide-react";
+import { Trash2, Receipt, FileSignature, Mail, Loader2, Users, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import DocumentoFirmaDialog from "./DocumentoFirmaDialog";
 import DocumentiList from "./DocumentiList";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 type Persona = Tables<"persone">;
 type TipoRuolo = Database["public"]["Enums"]["tipo_ruolo"];
@@ -47,16 +50,15 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
   const queryClient = useQueryClient();
   const [firmaOpen, setFirmaOpen] = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [showFamiliareDialog, setShowFamiliareDialog] = useState(false);
+  const [selectedFiglio, setSelectedFiglio] = useState("");
+  const [relazioneType, setRelazioneType] = useState("Genitore");
 
   const { data: movimenti = [] } = useQuery({
     queryKey: ["movimenti", persona?.id],
     enabled: !!persona,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("movimenti")
-        .select("*")
-        .eq("persona_id", persona!.id)
-        .order("data", { ascending: false });
+      const { data, error } = await supabase.from("movimenti").select("*").eq("persona_id", persona!.id).order("data", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -66,11 +68,7 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
     queryKey: ["abbonamenti-persona", persona?.id],
     enabled: !!persona,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("abbonamenti")
-        .select("*")
-        .eq("persona_id", persona!.id)
-        .order("data_inizio", { ascending: false });
+      const { data, error } = await supabase.from("abbonamenti").select("*").eq("persona_id", persona!.id).order("data_inizio", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -80,58 +78,75 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
     queryKey: ["tesseramenti-persona", persona?.id],
     enabled: !!persona,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tesseramenti")
-        .select("*")
-        .eq("persona_id", persona!.id)
-        .order("data_inizio", { ascending: false });
+      const { data, error } = await supabase.from("tesseramenti").select("*").eq("persona_id", persona!.id).order("data_inizio", { ascending: false });
       if (error) throw error;
       return data;
     },
   });
 
+  const { data: familiari = [] } = useQuery({
+    queryKey: ["familiari", persona?.id],
+    enabled: !!persona,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("familiari")
+        .select("*, figlio:persone!familiari_figlio_id_fkey(id, nome, cognome, data_nascita)")
+        .eq("genitore_id", persona!.id);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: tuttePersone = [] } = useQuery({
+    queryKey: ["persone-for-familiari"],
+    enabled: showFamiliareDialog,
+    queryFn: async () => {
+      const { data } = await supabase.from("persone").select("id, nome, cognome").order("cognome");
+      return data || [];
+    },
+  });
+
+  const aggiungiFamiliareMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("familiari").insert({
+        genitore_id: persona!.id,
+        figlio_id: selectedFiglio,
+        relazione: relazioneType,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["familiari", persona?.id] });
+      toast.success("Familiare collegato");
+      setShowFamiliareDialog(false);
+      setSelectedFiglio("");
+    },
+    onError: (e: any) => toast.error("Errore: " + e.message),
+  });
+
+  const rimuoviFamiliareMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("familiari").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["familiari", persona?.id] });
+      toast.success("Familiare rimosso");
+    },
+    onError: (e: any) => toast.error("Errore: " + e.message),
+  });
+
   const allHistory = useMemo<HistoryRow[]>(() => {
     const rows: HistoryRow[] = [];
-
     for (const m of movimenti) {
-      rows.push({
-        id: m.id,
-        data: m.data,
-        tipo: m.tipo,
-        categoria: m.categoria,
-        importo: Number(m.importo),
-        metodo: m.metodo_pagamento,
-        stato: "Pagato",
-        source: "movimento",
-      });
+      rows.push({ id: m.id, data: m.data, tipo: m.tipo, categoria: m.categoria, importo: Number(m.importo), metodo: m.metodo_pagamento, stato: "Pagato", source: "movimento" });
     }
-
     for (const a of abbonamenti) {
-      rows.push({
-        id: a.id,
-        data: a.data_inizio,
-        tipo: "Abbonamento",
-        categoria: `${a.corso} – ${a.stagione}`,
-        importo: Number(a.importo_totale),
-        metodo: a.tipo_pagamento,
-        stato: a.stato_pagamento,
-        source: "abbonamento",
-      });
+      rows.push({ id: a.id, data: a.data_inizio, tipo: "Abbonamento", categoria: `${a.corso} – ${a.stagione}`, importo: Number(a.importo_totale), metodo: a.tipo_pagamento, stato: a.stato_pagamento, source: "abbonamento" });
     }
-
     for (const t of tesseramenti) {
-      rows.push({
-        id: t.id,
-        data: t.data_inizio,
-        tipo: "Tesseramento",
-        categoria: `${t.tipo_tesseramento} – ${t.stagione}`,
-        importo: Number(t.importo),
-        metodo: (t as any).metodo_pagamento || "—",
-        stato: t.stato,
-        source: "tesseramento",
-      });
+      rows.push({ id: t.id, data: t.data_inizio, tipo: "Tesseramento", categoria: `${t.tipo_tesseramento} – ${t.stagione}`, importo: Number(t.importo), metodo: (t as any).metodo_pagamento || "—", stato: t.stato, source: "tesseramento" });
     }
-
     rows.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
     return rows;
   }, [movimenti, abbonamenti, tesseramenti]);
@@ -150,7 +165,7 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
 
   const totaleMovimenti = movimenti.reduce((sum, m) => sum + Number(m.importo), 0);
 
-   const handleInvite = async () => {
+  const handleInvite = async () => {
     if (!persona?.email) return;
     setInviting(true);
     try {
@@ -200,9 +215,7 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
             <TableCell className="text-xs font-medium">{r.tipo}</TableCell>
             <TableCell className="text-xs hidden sm:table-cell">{r.categoria}</TableCell>
             <TableCell className="text-xs">{r.metodo}</TableCell>
-            <TableCell>
-              <Badge variant="outline" className={`text-[10px] ${statoBadge(r.stato)}`}>{r.stato}</Badge>
-            </TableCell>
+            <TableCell><Badge variant="outline" className={`text-[10px] ${statoBadge(r.stato)}`}>{r.stato}</Badge></TableCell>
             <TableCell className="text-right font-medium text-xs">€{r.importo.toFixed(2)}</TableCell>
             {showDelete && (
               <TableCell>
@@ -264,6 +277,43 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
 
             <Separator />
 
+            {/* Familiari */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="font-semibold">Familiari / Figli</h3>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => setShowFamiliareDialog(true)}>
+                  <Plus className="h-3 w-3 mr-1" /> Aggiungi
+                </Button>
+              </div>
+              {familiari.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nessun familiare collegato</p>
+              ) : (
+                <div className="space-y-2">
+                  {familiari.map((f: any) => (
+                    <div key={f.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 text-sm">
+                      <div>
+                        <span className="font-medium">{f.figlio?.cognome} {f.figlio?.nome}</span>
+                        {f.figlio?.data_nascita && (
+                          <span className="text-muted-foreground text-xs ml-2">
+                            (nato il {new Date(f.figlio.data_nascita).toLocaleDateString("it-IT")})
+                          </span>
+                        )}
+                        <Badge variant="outline" className="ml-2 text-[10px]">{f.relazione}</Badge>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => rimuoviFamiliareMutation.mutate(f.id)}>
+                        <X className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
             {/* Storico Pagamenti */}
             <div>
               <h3 className="font-semibold">Storico Pagamenti</h3>
@@ -285,18 +335,10 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
                   <TabsTrigger value="abbonamenti" className="flex-1">Abbonamenti ({abbonamentiRows.length})</TabsTrigger>
                   <TabsTrigger value="tesseramenti" className="flex-1">Tesseramenti ({tesseramentiRows.length})</TabsTrigger>
                 </TabsList>
-                <TabsContent value="tutti">
-                  {renderHistoryTable(allHistory, true)}
-                </TabsContent>
-                <TabsContent value="movimenti">
-                  {movimentiRows.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Nessun movimento</p> : renderHistoryTable(movimentiRows, true)}
-                </TabsContent>
-                <TabsContent value="abbonamenti">
-                  {abbonamentiRows.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Nessun abbonamento</p> : renderHistoryTable(abbonamentiRows)}
-                </TabsContent>
-                <TabsContent value="tesseramenti">
-                  {tesseramentiRows.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Nessun tesseramento</p> : renderHistoryTable(tesseramentiRows)}
-                </TabsContent>
+                <TabsContent value="tutti">{renderHistoryTable(allHistory, true)}</TabsContent>
+                <TabsContent value="movimenti">{movimentiRows.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Nessun movimento</p> : renderHistoryTable(movimentiRows, true)}</TabsContent>
+                <TabsContent value="abbonamenti">{abbonamentiRows.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Nessun abbonamento</p> : renderHistoryTable(abbonamentiRows)}</TabsContent>
+                <TabsContent value="tesseramenti">{tesseramentiRows.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Nessun tesseramento</p> : renderHistoryTable(tesseramentiRows)}</TabsContent>
               </Tabs>
             )}
 
@@ -318,11 +360,52 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
         </SheetContent>
       </Sheet>
 
-      <DocumentoFirmaDialog
-        open={firmaOpen}
-        onOpenChange={setFirmaOpen}
-        persona={persona}
-      />
+      <DocumentoFirmaDialog open={firmaOpen} onOpenChange={setFirmaOpen} persona={persona} />
+
+      {/* Dialog Aggiungi Familiare */}
+      <Dialog open={showFamiliareDialog} onOpenChange={setShowFamiliareDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Collega familiare</DialogTitle>
+            <DialogDescription>Seleziona la persona da collegare come figlio/a di {persona.nome} {persona.cognome}.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Figlio/a</Label>
+              <Select value={selectedFiglio} onValueChange={setSelectedFiglio}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleziona persona..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {tuttePersone.filter((p: any) => p.id !== persona.id).map((p: any) => (
+                    <SelectItem key={p.id} value={p.id}>{p.cognome} {p.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Relazione</Label>
+              <Select value={relazioneType} onValueChange={setRelazioneType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Genitore">Genitore</SelectItem>
+                  <SelectItem value="Tutore">Tutore legale</SelectItem>
+                  <SelectItem value="Nonno/a">Nonno/a</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFamiliareDialog(false)}>Annulla</Button>
+            <Button onClick={() => aggiungiFamiliareMutation.mutate()} disabled={!selectedFiglio || aggiungiFamiliareMutation.isPending}>
+              {aggiungiFamiliareMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Collega
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
