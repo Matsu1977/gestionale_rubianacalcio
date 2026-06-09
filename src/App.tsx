@@ -1,8 +1,9 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import AppLayout from "@/components/AppLayout";
 import Dashboard from "./pages/Dashboard";
@@ -20,11 +21,23 @@ import Impostazioni from "./pages/Impostazioni";
 import MigrazioneMovimenti from "./pages/MigrazioneMovimenti";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
-import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient();
+
+function TokenHandler() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes("type=invite") || hash.includes("type=recovery")) {
+      navigate("/reset-password" + hash, { replace: true });
+    }
+  }, [navigate]);
+
+  return null;
+}
 
 function ProtectedRoutes() {
   const { user, role, loading } = useAuth();
@@ -94,6 +107,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <TokenHandler />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
