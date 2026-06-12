@@ -261,7 +261,7 @@ export default function Persone() {
                           <span className="text-xs text-muted-foreground">—</span>
                         ) : (
                           (corsiMap[persona.id]).map((nome) => {
-                            const colorIndex = nome.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % CORSO_COLORS.length;
+                            const colorIndex = nome.split("").reduce((acc, c, i) => acc + c.charCodeAt(0) * (i + 1), 0) % CORSO_COLORS.length;
                             return (
                               <Badge key={nome} variant="outline" className={`text-xs ${CORSO_COLORS[colorIndex]}`}>
                                 {nome}
