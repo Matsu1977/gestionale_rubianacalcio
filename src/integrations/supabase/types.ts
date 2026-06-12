@@ -204,6 +204,42 @@ export type Database = {
         }
         Relationships: []
       }
+      persona_corsi: {
+        Row: {
+          id: string
+          persona_id: string
+          corso_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          persona_id: string
+          corso_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          persona_id?: string
+          corso_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "persona_corsi_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "persone"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "persona_corsi_corso_id_fkey"
+            columns: ["corso_id"]
+            isOneToOne: false
+            referencedRelation: "corsi"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       documenti_firmati: {
         Row: {
           created_at: string

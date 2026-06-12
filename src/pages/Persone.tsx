@@ -71,6 +71,27 @@ export default function Persone() {
     },
   });
 
+// Fetch corsi iscritti per ogni persona
+  const { data: personaCorsiList = [] } = useQuery({
+    queryKey: ["persona_corsi-lista"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("persona_corsi")
+        .select("persona_id, corso:corsi(nome)");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const corsiMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const pc of personaCorsiList) {
+      if (!map[pc.persona_id]) map[pc.persona_id] = [];
+      if ((pc.corso as any)?.nome) map[pc.persona_id].push((pc.corso as any).nome);
+    }
+    return map;
+  }, [personaCorsiList]);
+
   const abbonamentiMap = useMemo(() => {
     const map: Record<string, { attivo: boolean }> = {};
     const now = new Date();
@@ -199,6 +220,7 @@ export default function Persone() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Ruoli</TableHead>
                 <TableHead className="hidden md:table-cell">Telefono</TableHead>
+                <TableHead className="hidden lg:table-cell">Corsi</TableHead>
                 <TableHead className="text-center">Cert. Medico</TableHead>
                 <TableHead className="text-center">Abbonamento</TableHead>
                 <TableHead className="w-[100px]">Azioni</TableHead>
@@ -224,6 +246,19 @@ export default function Persone() {
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{persona.telefono || "—"}</TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <div className="flex flex-wrap gap-1">
+                        {(corsiMap[persona.id] || []).length === 0 ? (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        ) : (
+                          (corsiMap[persona.id]).map((nome) => (
+                            <Badge key={nome} variant="outline" className="text-xs">
+                              {nome}
+                            </Badge>
+                          ))
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-center">
                       {certValid === null ? (
                         <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Minus className="h-4 w-4" /> N/D</span>

@@ -9,13 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trash2, Receipt, FileSignature, Mail, Loader2, Users, Plus, X } from "lucide-react";
+import { Trash2, Receipt, FileSignature, Mail, Loader2, Users, Plus, X, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import DocumentoFirmaDialog from "./DocumentoFirmaDialog";
 import DocumentiList from "./DocumentiList";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type Persona = Tables<"persone">;
 type TipoRuolo = Database["public"]["Enums"]["tipo_ruolo"];
@@ -53,6 +54,49 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
   const [showFamiliareDialog, setShowFamiliareDialog] = useState(false);
   const [selectedFiglio, setSelectedFiglio] = useState("");
   const [relazioneType, setRelazioneType] = useState("Genitore");
+
+  // Corsi disponibili (solo attivi)
+  const { data: tuttiCorsi = [] } = useQuery({
+    queryKey: ["corsi"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("corsi").select("*").eq("attivo", true).order("nome");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Corsi iscritti per questa persona
+  const { data: personaCorsi = [] } = useQuery({
+    queryKey: ["persona_corsi", persona?.id],
+    enabled: !!persona,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("persona_corsi").select("*").eq("persona_id", persona!.id);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const corsiIscritti = new Set(personaCorsi.map((pc: any) => pc.corso_id));
+
+  const toggleCorsoMutation = useMutation({
+    mutationFn: async ({ corsoId, iscritto }: { corsoId: string; iscritto: boolean }) => {
+      if (iscritto) {
+        const { error } = await supabase.from("persona_corsi").delete()
+          .eq("persona_id", persona!.id).eq("corso_id", corsoId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("persona_corsi").insert({
+          persona_id: persona!.id,
+          corso_id: corsoId,
+        });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["persona_corsi", persona?.id] });
+    },
+    onError: (e: any) => toast.error("Errore: " + e.message),
+  });
 
   const { data: movimenti = [] } = useQuery({
     queryKey: ["movimenti", persona?.id],
@@ -308,6 +352,46 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
                       </Button>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Corsi */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-semibold">Corsi iscritti</h3>
+              </div>
+              {tuttiCorsi.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nessun corso attivo. Creane uno in Impostazioni.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {tuttiCorsi.map((corso: any) => {
+                    const iscritto = corsiIscritti.has(corso.id);
+                    return (
+                      <div key={corso.id} className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
+                        <Checkbox
+                          id={`corso-${corso.id}`}
+                          checked={iscritto}
+                          onCheckedChange={() =>
+                            toggleCorsoMutation.mutate({ corsoId: corso.id, iscritto })
+                          }
+                          disabled={toggleCorsoMutation.isPending}
+                        />
+                        <label
+                          htmlFor={`corso-${corso.id}`}
+                          className="text-sm font-medium cursor-pointer select-none flex-1"
+                        >
+                          {corso.nome}
+                          {corso.descrizione && (
+                            <span className="text-muted-foreground text-xs block font-normal">{corso.descrizione}</span>
+                          )}
+                        </label>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
