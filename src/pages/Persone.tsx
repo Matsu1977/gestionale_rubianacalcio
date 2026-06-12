@@ -80,6 +80,24 @@ export default function Persone() {
     },
   });
 
+  // Lista tutti i corsi per assegnare colori stabili per indice
+  const { data: tuttiCorsi = [] } = useQuery({
+    queryKey: ["corsi"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("corsi").select("id, nome").order("created_at");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const corsoColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    tuttiCorsi.forEach((c: any, i: number) => {
+      map[c.nome] = CORSO_COLORS[i % CORSO_COLORS.length];
+    });
+    return map;
+  }, [tuttiCorsi]);
+
 // Fetch corsi iscritti per ogni persona
   const { data: personaCorsiList = [] } = useQuery({
     queryKey: ["persona_corsi-lista"],
@@ -261,9 +279,8 @@ export default function Persone() {
                           <span className="text-xs text-muted-foreground">—</span>
                         ) : (
                           (corsiMap[persona.id]).map((nome) => {
-                            const colorIndex = nome.split("").reduce((acc, c, i) => acc + c.charCodeAt(0) * (i + 1), 0) % CORSO_COLORS.length;
                             return (
-                              <Badge key={nome} variant="outline" className={`text-xs ${CORSO_COLORS[colorIndex]}`}>
+                              <Badge key={nome} variant="outline" className={`text-xs ${corsoColorMap[nome] || CORSO_COLORS[0]}`}>
                                 {nome}
                               </Badge>
                             );
