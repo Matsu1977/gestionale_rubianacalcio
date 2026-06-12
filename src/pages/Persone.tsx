@@ -17,6 +17,15 @@ import PersonaDetailSheet from "@/components/persone/PersonaDetailSheet";
 type Persona = Tables<"persone">;
 type TipoRuolo = Database["public"]["Enums"]["tipo_ruolo"];
 
+const CORSO_COLORS = [
+  "bg-sky-500/15 text-sky-700 border-sky-500/30",
+  "bg-violet-500/15 text-violet-700 border-violet-500/30",
+  "bg-orange-500/15 text-orange-700 border-orange-500/30",
+  "bg-teal-500/15 text-teal-700 border-teal-500/30",
+  "bg-pink-500/15 text-pink-700 border-pink-500/30",
+  "bg-lime-500/15 text-lime-700 border-lime-500/30",
+];
+
 const RUOLO_COLORS: Record<TipoRuolo, string> = {
   Dirigente: "bg-primary/15 text-primary border-primary/30",
   Socio: "bg-blue-500/15 text-blue-700 border-blue-500/30",
@@ -251,11 +260,14 @@ export default function Persone() {
                         {(corsiMap[persona.id] || []).length === 0 ? (
                           <span className="text-xs text-muted-foreground">—</span>
                         ) : (
-                          (corsiMap[persona.id]).map((nome) => (
-                            <Badge key={nome} variant="outline" className="text-xs">
-                              {nome}
-                            </Badge>
-                          ))
+                          (corsiMap[persona.id]).map((nome) => {
+                            const colorIndex = nome.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % CORSO_COLORS.length;
+                            return (
+                              <Badge key={nome} variant="outline" className={`text-xs ${CORSO_COLORS[colorIndex]}`}>
+                                {nome}
+                              </Badge>
+                            );
+                          })
                         )}
                       </div>
                     </TableCell>

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { User, CalendarCheck, Wallet, FileCheck, MessageSquare, ClipboardCheck, Landmark, Copy, ExternalLink, Users } from "lucide-react";
+import { User, CalendarCheck, Wallet, FileCheck, MessageSquare, ClipboardCheck, Landmark, Copy, ExternalLink, Users, BookOpen } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -195,6 +195,20 @@ export default function AtletaDashboard() {
       return map;
     },
   });
+
+  // Corsi iscritti
+  const { data: corsiIscritti = [] } = useQuery({
+    queryKey: ["atleta-corsi", persona?.id],
+    enabled: !!persona,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("persona_corsi")
+        .select("corso:corsi(nome, descrizione)")
+        .eq("persona_id", persona!.id);
+      return (data || []).map((pc: any) => pc.corso).filter(Boolean);
+    },
+  });
+
   const { data: figli = [] } = useQuery({
     queryKey: ["figli", persona?.id],
     enabled: !!persona,
@@ -203,7 +217,19 @@ export default function AtletaDashboard() {
         .from("familiari")
         .select("*, figlio:persone!familiari_figlio_id_fkey(id, nome, cognome, data_nascita, certificato_medico_scadenza)")
         .eq("genitore_id", persona!.id);
-      return data || [];
+      const figli = data || [];
+
+      // Per ogni figlio carica i corsi iscritti
+      for (const f of figli) {
+        if (f.figlio?.id) {
+          const { data: pcData } = await supabase
+            .from("persona_corsi")
+            .select("corso:corsi(nome)")
+            .eq("persona_id", f.figlio.id);
+          f.figlio.corsi = (pcData || []).map((pc: any) => pc.corso?.nome).filter(Boolean);
+        }
+      }
+      return figli;
     },
   });
 
@@ -571,6 +597,30 @@ export default function AtletaDashboard() {
         </Card>
       </motion.div>
 
+      {/* Corsi Iscritti */}
+      {corsiIscritti.length > 0 && (
+        <motion.div variants={item} initial="hidden" animate="show">
+          <Card className="glass-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-primary" />
+                I miei Corsi
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {corsiIscritti.map((corso: any) => (
+                <div key={corso.nome} className="p-3 rounded-lg bg-muted/50 text-sm">
+                  <span className="font-medium">{corso.nome}</span>
+                  {corso.descrizione && (
+                    <p className="text-xs text-muted-foreground mt-1">{corso.descrizione}</p>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Figli / Familiari */}
       {figli.length > 0 && (
         <motion.div variants={item} initial="hidden" animate="show">
@@ -603,6 +653,13 @@ export default function AtletaDashboard() {
                         <Badge variant={certScad ? "destructive" : "default"} className="text-[10px]">
                           {certScad ? "Scaduto" : "Valido"} · {format(parseISO(f.figlio.certificato_medico_scadenza), "dd/MM/yyyy")}
                         </Badge>
+                      </div>
+                    )}
+                    {f.figlio?.corsi?.length > 0 && (
+                      <div className="space-y-1 pt-1">
+                        {f.figlio.corsi.map((nome: string) => (
+                          <div key={nome} className="p-2 rounded-md bg-muted/50 text-xs font-medium">{nome}</div>
+                        ))}
                       </div>
                     )}
                   </div>
