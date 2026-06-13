@@ -666,16 +666,18 @@ istruttore_corsi: {
           },
         ]
       }
-      sessioni_allenamento: {
+     sessioni_allenamento: {
         Row: {
           corso: string
+          corso_id: string | null
           created_at: string
           data: string
           id: string
           note: string | null
         }
         Insert: {
-          corso: string
+          corso?: string
+          corso_id?: string | null
           created_at?: string
           data?: string
           id?: string
@@ -683,12 +685,21 @@ istruttore_corsi: {
         }
         Update: {
           corso?: string
+          corso_id?: string | null
           created_at?: string
           data?: string
           id?: string
           note?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sessioni_allenamento_corso_id_fkey"
+            columns: ["corso_id"]
+            isOneToOne: false
+            referencedRelation: "corsi"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       tesseramenti: {
         Row: {
