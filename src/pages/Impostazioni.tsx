@@ -41,6 +41,7 @@ const ROLE_LABELS: Record<string, string> = {
   admin: "Amministratore",
   segreteria: "Segreteria",
   allenatore: "Allenatore",
+  istruttore: "Istruttore",
   atleta: "Atleta",
 };
 
@@ -48,12 +49,23 @@ async function callAdminApi(action: string, params: Record<string, any>) {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error("Non autenticato");
 
-  const res = await supabase.functions.invoke("admin-users", {
-    body: { action, ...params },
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+  const res = await fetch(`${supabaseUrl}/functions/v1/admin-users`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`,
+      "apikey": supabaseAnonKey,
+    },
+    body: JSON.stringify({ action, ...params }),
   });
-  if (res.error) throw new Error(res.error.message || "Errore server");
-  if (res.data?.error) throw new Error(res.data.error);
-  return res.data;
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Errore server");
+  if (data.error) throw new Error(data.error);
+  return data;
 }
 
 export default function Impostazioni() {
@@ -290,8 +302,11 @@ export default function Impostazioni() {
                                 <SelectItem value="segreteria">
                                   <div className="flex items-center gap-2"><Users className="h-3.5 w-3.5" /> Segreteria</div>
                                 </SelectItem>
-                                <SelectItem value="allenatore">
+                               <SelectItem value="allenatore">
                                   <div className="flex items-center gap-2"><UserCog className="h-3.5 w-3.5" /> Allenatore</div>
+                                </SelectItem>
+                                <SelectItem value="istruttore">
+                                  <div className="flex items-center gap-2"><UserCog className="h-3.5 w-3.5" /> Istruttore</div>
                                 </SelectItem>
                                 <SelectItem value="atleta">
                                   <div className="flex items-center gap-2"><UserCog className="h-3.5 w-3.5" /> Atleta</div>
@@ -457,6 +472,7 @@ export default function Impostazioni() {
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="segreteria">Segreteria</SelectItem>
                   <SelectItem value="allenatore">Allenatore</SelectItem>
+                  <SelectItem value="istruttore">Istruttore</SelectItem>
                   <SelectItem value="atleta">Atleta</SelectItem>
                 </SelectContent>
               </Select>

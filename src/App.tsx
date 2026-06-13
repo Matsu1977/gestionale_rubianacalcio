@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import AppLayout from "@/components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import AtletaDashboard from "./pages/AtletaDashboard";
+import IstruttoreDashboard from "./pages/IstruttoreDashboard";
 import Persone from "./pages/Persone";
 import Tesseramenti from "./pages/Tesseramenti";
 import Abbonamenti from "./pages/Abbonamenti";
@@ -66,6 +67,7 @@ function ProtectedRoutes() {
   const isAdmin = role === "admin";
   const isSegreteria = role === "segreteria";
   const isAtleta = role === "atleta";
+  const isIstruttore = role === "istruttore";
   const hasFullAccess = isAdmin || isSegreteria;
 
   if (isAtleta) {
@@ -73,6 +75,17 @@ function ProtectedRoutes() {
       <AppLayout>
         <Routes>
           <Route path="/" element={<AtletaDashboard />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AppLayout>
+    );
+  }
+
+  if (isIstruttore) {
+    return (
+      <AppLayout>
+        <Routes>
+          <Route path="/" element={<IstruttoreDashboard />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppLayout>
