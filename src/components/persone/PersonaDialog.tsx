@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 
 type TipoRuolo = Database["public"]["Enums"]["tipo_ruolo"];
 
-const RUOLI_OPTIONS: TipoRuolo[] = ["Dirigente", "Socio", "Abbonato", "Atleta", "Allenatore", "Genitore"];
+const RUOLI_OPTIONS: TipoRuolo[] = ["Dirigente", "Socio", "Abbonato", "Atleta", "Giocatore", "Allenatore", "Istruttore", "Genitore"];
 
 const schema = z.object({
   nome: z.string().trim().min(1, "Nome obbligatorio").max(100),

@@ -804,7 +804,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "allenatore" | "segreteria" | "atleta"
+     app_role: "admin" | "allenatore" | "istruttore" | "segreteria" | "atleta"
       categoria_movimento:
         | "Quota socio"
         | "Abbonamento"
@@ -817,7 +817,9 @@ export type Database = {
         | "Socio"
         | "Abbonato"
         | "Atleta"
+        | "Giocatore"
         | "Allenatore"
+        | "Istruttore"
         | "Genitore"
     }
     CompositeTypes: {

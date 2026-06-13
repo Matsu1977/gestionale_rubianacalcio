@@ -26,7 +26,9 @@ const RUOLO_COLORS: Record<TipoRuolo, string> = {
   Socio: "bg-blue-500/15 text-blue-700 border-blue-500/30",
   Abbonato: "bg-amber-500/15 text-amber-700 border-amber-500/30",
   Atleta: "bg-green-500/15 text-green-700 border-green-500/30",
+  Giocatore: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30",
   Allenatore: "bg-purple-500/15 text-purple-700 border-purple-500/30",
+  Istruttore: "bg-cyan-500/15 text-cyan-700 border-cyan-500/30",
   Genitore: "bg-rose-500/15 text-rose-700 border-rose-500/30",
 };
 
