@@ -100,6 +100,27 @@ export default function Persone() {
     return map;
   }, [tuttiCorsi]);
 
+  // Fetch corsi insegnati dagli istruttori
+  const { data: istruttoreCorsiList = [] } = useQuery({
+    queryKey: ["istruttore_corsi-lista"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("istruttore_corsi")
+        .select("persona_id, corso:corsi(nome)");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const istruttoreCorsiMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const ic of istruttoreCorsiList) {
+      if (!map[ic.persona_id]) map[ic.persona_id] = [];
+      if ((ic.corso as any)?.nome) map[ic.persona_id].push((ic.corso as any).nome);
+    }
+    return map;
+  }, [istruttoreCorsiList]);
+
 // Fetch corsi iscritti per ogni persona
   const { data: personaCorsiList = [] } = useQuery({
     queryKey: ["persona_corsi-lista"],
@@ -277,17 +298,21 @@ export default function Persone() {
                     <TableCell className="hidden md:table-cell">{persona.telefono || "—"}</TableCell>
                     <TableCell className="hidden lg:table-cell">
                       <div className="flex flex-wrap gap-1">
-                        {(corsiMap[persona.id] || []).length === 0 ? (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        ) : (
-                          (corsiMap[persona.id]).map((nome) => {
-                            return (
+                        {(() => {
+                          const isIstruttore = (ruoliMap[persona.id] || []).includes("Istruttore");
+                          const nomi = isIstruttore
+                            ? (istruttoreCorsiMap[persona.id] || [])
+                            : (corsiMap[persona.id] || []);
+                          return nomi.length === 0 ? (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          ) : (
+                            nomi.map((nome) => (
                               <Badge key={nome} variant="outline" className={`text-xs ${corsoColorMap[nome] || CORSO_COLORS[0]}`}>
                                 {nome}
                               </Badge>
-                            );
-                          })
-                        )}
+                            ))
+                          );
+                        })()}
                       </div>
                     </TableCell>
                     <TableCell className="text-center">

@@ -204,6 +204,44 @@ export type Database = {
         }
         Relationships: []
       }
+
+istruttore_corsi: {
+        Row: {
+          id: string
+          persona_id: string
+          corso_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          persona_id: string
+          corso_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          persona_id?: string
+          corso_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "istruttore_corsi_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "persone"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "istruttore_corsi_corso_id_fkey"
+            columns: ["corso_id"]
+            isOneToOne: false
+            referencedRelation: "corsi"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+
       persona_corsi: {
         Row: {
           id: string

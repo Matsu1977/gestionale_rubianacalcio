@@ -80,6 +80,39 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
 
   const corsiIscritti = new Set(personaCorsi.map((pc: any) => pc.corso_id));
 
+  // Corsi insegnati (solo per istruttori)
+  const { data: istruttoreCorsi = [] } = useQuery({
+    queryKey: ["istruttore_corsi", persona?.id],
+    enabled: !!persona && ruoli.includes("Istruttore"),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("istruttore_corsi").select("*").eq("persona_id", persona!.id);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const corsiInsegnati = new Set(istruttoreCorsi.map((ic: any) => ic.corso_id));
+
+  const toggleInsegnaMutation = useMutation({
+    mutationFn: async ({ corsoId, insegna }: { corsoId: string; insegna: boolean }) => {
+      if (insegna) {
+        const { error } = await supabase.from("istruttore_corsi").delete()
+          .eq("persona_id", persona!.id).eq("corso_id", corsoId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("istruttore_corsi").insert({
+          persona_id: persona!.id,
+          corso_id: corsoId,
+        });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["istruttore_corsi", persona?.id] });
+    },
+    onError: (e: any) => toast.error("Errore: " + e.message),
+  });
+
   const toggleCorsoMutation = useMutation({
     mutationFn: async ({ corsoId, iscritto }: { corsoId: string; iscritto: boolean }) => {
       if (iscritto) {
@@ -397,6 +430,43 @@ export default function PersonaDetailSheet({ persona, ruoli, onClose }: Props) {
                 </div>
               )}
             </div>
+
+{/* Corsi insegnati - solo per Istruttori */}
+            {ruoli.includes("Istruttore") && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <BookOpen className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="font-semibold">Corsi insegnati</h3>
+                </div>
+                {tuttiCorsi.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nessun corso attivo.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {tuttiCorsi.map((corso: any) => {
+                      const insegna = corsiInsegnati.has(corso.id);
+                      return (
+                        <div key={corso.id} className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
+                          <Checkbox
+                            id={`insegna-${corso.id}`}
+                            checked={insegna}
+                            onCheckedChange={() =>
+                              toggleInsegnaMutation.mutate({ corsoId: corso.id, insegna })
+                            }
+                            disabled={toggleInsegnaMutation.isPending}
+                          />
+                          <label
+                            htmlFor={`insegna-${corso.id}`}
+                            className="text-sm font-medium cursor-pointer select-none flex-1"
+                          >
+                            {corso.nome}
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             <Separator />
 
